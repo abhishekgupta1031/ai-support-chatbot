@@ -1,3 +1,4 @@
+```css
 /* ================================
    GLOBAL
 ================================ */
@@ -152,6 +153,19 @@ body {
 
 
 /* ================================
+   HEADER BUTTONS
+================================ */
+
+.header-buttons {
+    display: flex;
+
+    align-items: center;
+
+    gap: 10px;
+}
+
+
+/* ================================
    HISTORY BUTTON
 ================================ */
 
@@ -180,6 +194,45 @@ body {
     background: rgba(255, 255, 255, 0.25);
 
     transform: translateY(-1px);
+}
+
+
+/* ================================
+   ADMIN LOGIN BUTTON
+================================ */
+
+.admin-btn {
+    text-decoration: none;
+
+    color: #ffffff;
+
+    background: rgba(15, 23, 42, 0.22);
+
+    border: 1px solid rgba(255, 255, 255, 0.30);
+
+    padding: 10px 16px;
+
+    border-radius: 10px;
+
+    font-size: 14px;
+    font-weight: 600;
+
+    transition: all 0.2s ease;
+
+    white-space: nowrap;
+}
+
+.admin-btn:hover {
+    background: rgba(15, 23, 42, 0.35);
+
+    transform: translateY(-1px);
+
+    box-shadow:
+        0 6px 16px rgba(15, 23, 42, 0.15);
+}
+
+.admin-btn:active {
+    transform: translateY(0);
 }
 
 
@@ -673,10 +726,15 @@ body {
         font-size: 11px;
     }
 
-    .history-btn {
-        padding: 8px 11px;
+    .header-buttons {
+        gap: 6px;
+    }
 
-        font-size: 12px;
+    .history-btn,
+    .admin-btn {
+        padding: 8px 10px;
+
+        font-size: 11px;
     }
 
     .chat-box {
@@ -748,8 +806,15 @@ body {
         font-size: 15px;
     }
 
-    .history-btn {
-        font-size: 11px;
+    .header-buttons {
+        gap: 4px;
+    }
+
+    .history-btn,
+    .admin-btn {
+        padding: 7px 8px;
+
+        font-size: 10px;
     }
 
     .bubble {
@@ -764,3 +829,4 @@ body {
         min-width: 55px;
     }
 }
+```
