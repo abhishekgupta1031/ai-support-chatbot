@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Chat History</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='history.css') }}">
+</head>
+
+<body>
+
+    <div class="history-page">
+
+        <div class="history-header">
+
+            <div>
+                <h1>📊 Chat History</h1>
+                <p>AI Support Chatbot Interaction Logs</p>
+            </div>
+
+            <a href="/" class="back-button">
+                ← Back to Chat
+            </a>
+
+        </div>
+
+
+        <div class="stats">
+
+            <div class="stats-card">
+
+                <div class="stats-number">
+                    {{ chats|length }}
+                </div>
+
+                <div class="stats-label">
+                    Total Conversations
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="history-content">
+
+            {% if chats %}
+
+                {% for chat in chats %}
+
+                    <div class="conversation">
+
+                        <div class="conversation-id">
+                            Conversation #{{ chat[0] }}
+                        </div>
+
+                        <div class="history-message history-user">
+
+                            <div class="message-title">
+                                👤 User
+                            </div>
+
+                            {{ chat[1] }}
+
+                        </div>
+
+                        <div class="history-message history-bot">
+
+                            <div class="message-title">
+                                🤖 AI Assistant
+                            </div>
+
+                            {{ chat[2] }}
+
+                        </div>
+
+                        <div class="timestamp">
+                            🕐 {{ chat[3] }}
+                        </div>
+
+                    </div>
+
+                {% endfor %}
+
+            {% else %}
+
+                <div class="empty-state">
+
+                    <div class="icon">💬</div>
+
+                    <h2>No Conversations Yet</h2>
+
+                    <p>
+                        Start chatting with the AI Support Assistant
+                        to see your conversation history here.
+                    </p>
+
+                </div>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+</body>
+</html>

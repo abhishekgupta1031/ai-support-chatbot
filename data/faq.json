@@ -1,0 +1,82 @@
+{
+    "faqs": [
+        {
+            "question": "How can I track my order?",
+            "keywords": [
+                "track",
+                "tracking",
+                "order status",
+                "shipment"
+            ],
+            "answer": "Please provide your order ID and I'll help you check the order status."
+        },
+        {
+            "question": "How long does delivery take?",
+            "keywords": [
+                "delivery",
+                "shipping",
+                "arrive",
+                "how long"
+            ],
+            "answer": "Standard delivery usually takes 3–5 business days."
+        },
+        {
+            "question": "How can I get a refund?",
+            "keywords": [
+                "refund",
+                "money back",
+                "return",
+                "reimburse"
+            ],
+            "answer": "I can help with your refund. Please provide your order ID and the reason for the refund."
+        },
+        {
+            "question": "What should I do if my payment failed?",
+            "keywords": [
+                "payment failed",
+                "payment",
+                "card",
+                "transaction"
+            ],
+            "answer": "If your payment failed, please check your payment details or try another payment method."
+        },
+        {
+            "question": "Money was deducted but order was not confirmed",
+            "keywords": [
+                "money deducted",
+                "money debited",
+                "payment deducted",
+                "order not confirmed"
+            ],
+            "answer": "If money was deducted but your order was not confirmed, please contact support with your transaction details."
+        },
+        {
+            "question": "How can I reset my password?",
+            "keywords": [
+                "forgot password",
+                "reset password",
+                "password"
+            ],
+            "answer": "If you forgot your password, use the 'Forgot Password' option on the login page."
+        },
+        {
+            "question": "Can I cancel my order?",
+            "keywords": [
+                "cancel order",
+                "cancellation",
+                "cancel"
+            ],
+            "answer": "Orders can usually be cancelled before they are shipped. Please provide your order ID."
+        },
+        {
+            "question": "How can I contact support?",
+            "keywords": [
+                "contact support",
+                "customer support",
+                "help",
+                "support"
+            ],
+            "answer": "Please describe your issue and I'll try to help you. If the issue requires a human agent, please contact customer support."
+        }
+    ]
+}
