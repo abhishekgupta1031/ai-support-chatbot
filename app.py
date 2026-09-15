@@ -14,27 +14,38 @@ import sqlite3
 from datetime import datetime
 import json
 import os
+from dotenv import load_dotenv
 
+load_dotenv()
+
+
+# =========================
+# APPLICATION
+# =========================
 
 app = Flask(__name__)
 
-# =========================
-# SECRET KEY
-# =========================
-
-app.secret_key = "ai-chatbot-secret-key"
-
 
 # =========================
-# ADMIN LOGIN
+# SECURITY CONFIGURATION
 # =========================
 
-ADMIN_USERNAME = "admin"
-ADMIN_PASSWORD = "admin123"
+app.secret_key = os.environ.get(
+    "SECRET_KEY",
+    "change-this-secret-key"
+)
+
+ADMIN_USERNAME = os.environ.get(
+    "ADMIN_USERNAME"
+)
+
+ADMIN_PASSWORD = os.environ.get(
+    "ADMIN_PASSWORD"
+)
 
 
 # =========================
-# CONFIGURATION
+# PROJECT PATHS
 # =========================
 
 BASE_DIR = os.path.dirname(
@@ -246,12 +257,10 @@ def chat():
                 "Invalid request."
             }), 400
 
-
         user_message = data.get(
             "message",
             ""
         ).strip()
-
 
         if not user_message:
 
@@ -260,50 +269,28 @@ def chat():
                 "Please type a message."
             }), 400
 
-
-        # =========================
-        # CONVERSATION CONTEXT
-        # =========================
-
         context = session.get(
             "chat_context",
             {}
         )
-
-
-        # =========================
-        # GENERATE RESPONSE
-        # =========================
 
         response = get_response(
             user_message,
             context
         )
 
-
-        # =========================
-        # SAVE UPDATED CONTEXT
-        # =========================
-
         session["chat_context"] = context
 
         session.modified = True
-
-
-        # =========================
-        # SAVE CHAT LOG
-        # =========================
 
         save_chat(
             user_message,
             response
         )
 
-
         return jsonify({
             "response": response
         })
-
 
     except Exception as error:
 
@@ -339,7 +326,8 @@ def clear_context():
 
         return jsonify({
             "success": True,
-            "message": "Conversation context cleared."
+            "message":
+            "Conversation context cleared."
         })
 
     except Exception as error:
@@ -351,7 +339,8 @@ def clear_context():
 
         return jsonify({
             "success": False,
-            "message": "Unable to clear conversation context."
+            "message":
+            "Unable to clear conversation context."
         }), 500
 
 
@@ -379,7 +368,6 @@ def history():
     chats = cursor.fetchall()
 
     conn.close()
-
 
     return render_template(
         "history.html",
@@ -409,9 +397,10 @@ def admin_login():
             ""
         )
 
-
         if (
-            username == ADMIN_USERNAME
+            ADMIN_USERNAME
+            and ADMIN_PASSWORD
+            and username == ADMIN_USERNAME
             and password == ADMIN_PASSWORD
         ):
 
@@ -421,12 +410,10 @@ def admin_login():
                 url_for("admin")
             )
 
-
         return render_template(
             "admin_login.html",
             error="Invalid username or password."
         )
-
 
     return render_template(
         "admin_login.html",
@@ -466,11 +453,9 @@ def admin():
             url_for("admin_login")
         )
 
-
     conn = get_db_connection()
 
     cursor = conn.cursor()
-
 
     # Total conversations
 
@@ -522,7 +507,6 @@ def admin():
     """)
 
     recent_chats = cursor.fetchall()
-
 
     conn.close()
 
@@ -676,10 +660,11 @@ def delete_faq(index):
 # START APPLICATION
 # =========================
 
+# Initialize database when the
+# application starts, including Gunicorn.
+init_db()
+
 if __name__ == "__main__":
-
-    init_db()
-
     app.run(
         debug=True
     )
