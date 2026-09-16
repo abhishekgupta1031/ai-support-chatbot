@@ -31,7 +31,6 @@
                 AI Support Chatbot Dashboard
             </p>
 
-
             <!-- Error Message -->
             {% if error %}
 
@@ -40,7 +39,6 @@
             </div>
 
             {% endif %}
-
 
             <!-- Login Form -->
             <form method="POST"
@@ -63,7 +61,6 @@
 
                 </div>
 
-
                 <div class="form-group">
 
                     <label for="password">
@@ -81,7 +78,6 @@
 
                 </div>
 
-
                 <button
                     type="submit"
                     class="login-button">
@@ -92,7 +88,6 @@
 
             </form>
 
-
             <!-- Back to Chat -->
             <a href="{{ url_for('home') }}"
                class="back-link">
@@ -100,26 +95,6 @@
                 ← Back to Chat
 
             </a>
-
-
-            <!-- Demo Credentials -->
-            <div class="demo-info">
-
-                <div class="demo-title">
-                    🔑 Demo Credentials
-                </div>
-
-                <div>
-                    Username:
-                    <strong>admin</strong>
-                </div>
-
-                <div>
-                    Password:
-                    <strong>admin123</strong>
-                </div>
-
-            </div>
 
         </div>
 
