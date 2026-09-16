@@ -7,6 +7,9 @@
     <meta name="viewport"
           content="width=device-width, initial-scale=1.0">
 
+    <meta name="description"
+          content="Secure Admin Login for AI Support Chatbot">
+
     <title>Admin Login - AI Support Chatbot</title>
 
     <link rel="stylesheet"
@@ -17,11 +20,16 @@
 
     <div class="login-page">
 
+        <!-- Background Decorative Elements -->
+        <div class="bg-circle bg-circle-one"></div>
+        <div class="bg-circle bg-circle-two"></div>
+        <div class="bg-glow"></div>
+
         <div class="login-card">
 
-            <!-- Logo -->
+            <!-- AI Robot Icon -->
             <div class="login-icon">
-                🔐
+                🤖
             </div>
 
             <!-- Heading -->
@@ -33,21 +41,20 @@
 
             <!-- Error Message -->
             {% if error %}
-
             <div class="error-message">
                 ⚠️ {{ error }}
             </div>
-
             {% endif %}
 
             <!-- Login Form -->
             <form method="POST"
                   action="{{ url_for('admin_login') }}">
 
+                <!-- Username -->
                 <div class="form-group">
 
                     <label for="username">
-                        Username
+                        👤 Username
                     </label>
 
                     <input
@@ -61,32 +68,68 @@
 
                 </div>
 
+                <!-- Password -->
                 <div class="form-group">
 
                     <label for="password">
-                        Password
+                        🔒 Password
                     </label>
 
-                    <input
-                        type="password"
-                        id="password"
-                        name="password"
-                        placeholder="Enter password"
-                        autocomplete="current-password"
-                        required
-                    >
+                    <div class="password-wrapper">
+
+                        <input
+                            type="password"
+                            id="password"
+                            name="password"
+                            placeholder="Enter password"
+                            autocomplete="current-password"
+                            required
+                        >
+
+                        <button
+                            type="button"
+                            class="password-toggle"
+                            onclick="togglePassword()"
+                            aria-label="Show password">
+
+                            👁️
+
+                        </button>
+
+                    </div>
 
                 </div>
 
+                <!-- Forgot Password -->
+                <div class="forgot-wrapper">
+
+                    <a href="{{ url_for('forgot_password') }}"
+                       class="forgot-link">
+
+                        ↻ Forgot Password?
+
+                    </a>
+
+                </div>
+
+                <!-- Login Button -->
                 <button
                     type="submit"
                     class="login-button">
 
-                    Login to Dashboard →
+                    <span>⇥</span>
+                    Login to Dashboard
 
                 </button>
 
             </form>
+
+            <!-- Divider -->
+            <div class="divider">
+                <span></span>
+                <p>or</p>
+                <span></span>
+            </div>
 
             <!-- Back to Chat -->
             <a href="{{ url_for('home') }}"
@@ -99,6 +142,33 @@
         </div>
 
     </div>
+
+    <script>
+
+        function togglePassword() {
+
+            const passwordInput =
+                document.getElementById("password");
+
+            const toggleButton =
+                document.querySelector(".password-toggle");
+
+            if (passwordInput.type === "password") {
+
+                passwordInput.type = "text";
+
+                toggleButton.textContent = "🙈";
+
+            } else {
+
+                passwordInput.type = "password";
+
+                toggleButton.textContent = "👁️";
+
+            }
+        }
+
+    </script>
 
 </body>
 

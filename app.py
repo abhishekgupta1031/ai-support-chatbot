@@ -1,4 +1,3 @@
-
 from flask import (
     Flask,
     render_template,
@@ -9,434 +8,305 @@ from flask import (
     url_for
 )
 
-from chatbot import (
-    get_response,
-    find_best_intent
-)
+from chatbot import get_response, find_best_intent
 
 import sqlite3
 from datetime import datetime, timedelta
 import json
 import os
+import secrets
+import smtplib
+from email.message import EmailMessage
+
 from dotenv import load_dotenv
+from werkzeug.security import generate_password_hash, check_password_hash
+
+
+# =========================================================
+# ENVIRONMENT VARIABLES
+# =========================================================
 
 load_dotenv()
 
 
-# =========================
-# APPLICATION
-# =========================
-
 app = Flask(__name__)
-
-
-# =========================
-# SECURITY CONFIGURATION
-# =========================
 
 app.secret_key = os.environ.get(
     "SECRET_KEY",
     "change-this-secret-key"
 )
 
-ADMIN_USERNAME = os.environ.get(
-    "ADMIN_USERNAME"
-)
+ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
 
-ADMIN_PASSWORD = os.environ.get(
-    "ADMIN_PASSWORD"
-)
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL")
 
-
-# =========================
-# PROJECT PATHS
-# =========================
-
-BASE_DIR = os.path.dirname(
-    os.path.abspath(__file__)
-)
-
-DATABASE = os.path.join(
-    BASE_DIR,
-    "chatbot.db"
-)
-
-FAQ_FILE = os.path.join(
-    BASE_DIR,
-    "data",
-    "faq.json"
-)
+SMTP_HOST = os.environ.get("SMTP_HOST")
+SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
+SMTP_USERNAME = os.environ.get("SMTP_USERNAME")
+SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD")
 
 
-# =========================
-# DATABASE CONNECTION
-# =========================
+# =========================================================
+# DATABASE
+# =========================================================
+
+DB_NAME = "chatbot.db"
+
 
 def get_db_connection():
-
-    conn = sqlite3.connect(
-        DATABASE
-    )
-
+    conn = sqlite3.connect(DB_NAME)
     conn.row_factory = sqlite3.Row
-
     return conn
 
 
-# =========================
-# DATABASE INITIALIZATION
-# =========================
-
 def init_db():
-
     conn = get_db_connection()
 
     cursor = conn.cursor()
 
-    # Create table if it does not exist
+    # Chat logs table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS chat_logs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_message TEXT NOT NULL,
             bot_response TEXT NOT NULL,
-            timestamp TEXT NOT NULL,
-            intent TEXT
+            intent TEXT,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     """)
 
-    # Safe migration for existing databases
-    cursor.execute("""
-        PRAGMA table_info(chat_logs)
-    """)
-
-    columns = [
-        row[1]
-        for row in cursor.fetchall()
-    ]
+    # Check whether old database has intent column
+    cursor.execute("PRAGMA table_info(chat_logs)")
+    columns = [column["name"] for column in cursor.fetchall()]
 
     if "intent" not in columns:
-
         cursor.execute("""
             ALTER TABLE chat_logs
             ADD COLUMN intent TEXT
         """)
 
-    conn.commit()
+    # Admin credentials
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS admin_credentials (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL
+        )
+    """)
 
+    # Password reset tokens
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS password_reset_tokens (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            token TEXT UNIQUE NOT NULL,
+            expires_at DATETIME NOT NULL,
+            used INTEGER DEFAULT 0
+        )
+    """)
+
+    # Initialize admin account from .env
+    if ADMIN_USERNAME and ADMIN_PASSWORD:
+
+        cursor.execute("""
+            SELECT id
+            FROM admin_credentials
+            WHERE username = ?
+        """, (ADMIN_USERNAME,))
+
+        existing_admin = cursor.fetchone()
+
+        if not existing_admin:
+            password_hash = generate_password_hash(ADMIN_PASSWORD)
+
+            cursor.execute("""
+                INSERT INTO admin_credentials
+                (username, password_hash)
+                VALUES (?, ?)
+            """, (
+                ADMIN_USERNAME,
+                password_hash
+            ))
+
+    conn.commit()
     conn.close()
 
 
-# =========================
-# SAVE CHAT
-# =========================
+# =========================================================
+# CHAT LOGGING
+# =========================================================
 
-def save_chat(
-    user_message,
-    bot_response,
-    intent=None
-):
+def save_chat(user_message, bot_response, intent=None):
 
     try:
-
         conn = get_db_connection()
 
-        cursor = conn.cursor()
-
-        timestamp = datetime.now().strftime(
-            "%Y-%m-%d %H:%M:%S"
-        )
-
-        cursor.execute("""
+        conn.execute("""
             INSERT INTO chat_logs
-            (
-                user_message,
-                bot_response,
-                timestamp,
-                intent
-            )
-            VALUES (?, ?, ?, ?)
+            (user_message, bot_response, intent)
+            VALUES (?, ?, ?)
         """, (
             user_message,
             bot_response,
-            timestamp,
             intent
         ))
 
         conn.commit()
-
         conn.close()
 
-        return True
-
-    except sqlite3.Error as error:
-
-        print(
-            "Database Error:",
-            error
-        )
-
-        return False
+    except Exception as e:
+        print("Database logging error:", e)
 
 
-# =========================
-# FAQ FUNCTIONS
-# =========================
+# =========================================================
+# FAQ MANAGEMENT
+# =========================================================
+
+FAQ_FILE = os.path.join("data", "faq.json")
+
 
 def load_faqs():
 
     try:
+        with open(FAQ_FILE, "r", encoding="utf-8") as file:
+            return json.load(file)
 
-        with open(
-            FAQ_FILE,
-            "r",
-            encoding="utf-8"
-        ) as file:
-
-            data = json.load(file)
-
-        return data.get(
-            "faqs",
-            []
-        )
-
-    except FileNotFoundError:
-
-        print(
-            "FAQ file not found:",
-            FAQ_FILE
-        )
-
-        return []
-
-    except json.JSONDecodeError:
-
-        print(
-            "Invalid JSON format in faq.json"
-        )
-
+    except Exception:
         return []
 
 
 def save_faqs(faqs):
 
-    try:
+    os.makedirs("data", exist_ok=True)
 
-        with open(
-            FAQ_FILE,
-            "w",
-            encoding="utf-8"
-        ) as file:
+    with open(
+        FAQ_FILE,
+        "w",
+        encoding="utf-8"
+    ) as file:
 
-            json.dump(
-                {
-                    "faqs": faqs
-                },
-                file,
-                indent=4,
-                ensure_ascii=False
-            )
-
-        return True
-
-    except OSError as error:
-
-        print(
-            "FAQ Save Error:",
-            error
+        json.dump(
+            faqs,
+            file,
+            indent=4,
+            ensure_ascii=False
         )
 
-        return False
 
-
-# =========================
+# =========================================================
 # HOME
-# =========================
+# =========================================================
 
 @app.route("/")
 def home():
-
-    return render_template(
-        "index.html"
-    )
+    return render_template("index.html")
 
 
-# =========================
+# =========================================================
 # CHAT API
-# =========================
+# =========================================================
 
-@app.route(
-    "/chat",
-    methods=["POST"]
-)
+@app.route("/chat", methods=["POST"])
 def chat():
 
+    data = request.get_json()
+
+    if not data:
+        return jsonify({
+            "response": "Please enter a message."
+        })
+
+    user_message = data.get("message", "").strip()
+
+    if not user_message:
+        return jsonify({
+            "response": "Please enter a message."
+        })
+
     try:
 
-        data = request.get_json(
-            silent=True
-        )
+        bot_response = get_response(user_message)
 
-        if not data:
+        intent_result = find_best_intent(user_message)
 
-            return jsonify({
-                "response":
-                "Invalid request."
-            }), 400
+        if isinstance(intent_result, tuple):
+            intent = intent_result[0]
+        else:
+            intent = intent_result
 
-        user_message = data.get(
-            "message",
-            ""
-        ).strip()
-
-        if not user_message:
-
-            return jsonify({
-                "response":
-                "Please type a message."
-            }), 400
-
-        context = session.get(
-            "chat_context",
-            {}
-        )
-
-        # Existing chatbot response
-        response = get_response(
-            user_message,
-            context
-        )
-
-        session["chat_context"] = context
-
-        session.modified = True
-
-
-        # =========================
-        # DETECT INTENT
-        # =========================
-
-        try:
-
-            detected_intent, intent_score = (
-                find_best_intent(
-                    user_message
-                )
-            )
-
-        except Exception as intent_error:
-
-            print(
-                "Intent Detection Error:",
-                intent_error
-            )
-
-            detected_intent = None
-
-
-        # Save chat + intent
         save_chat(
             user_message,
-            response,
-            detected_intent
+            bot_response,
+            intent
         )
 
-
         return jsonify({
-            "response": response
+            "response": bot_response
         })
 
-    except Exception as error:
+    except Exception as e:
 
-        print(
-            "Chat Error:",
-            error
-        )
+        print("Chat error:", e)
 
         return jsonify({
-            "response":
-            "Sorry, something went wrong. Please try again."
+            "response": "Sorry, something went wrong. Please try again."
         }), 500
 
 
-# =========================
-# CLEAR CHAT CONTEXT
-# =========================
+# =========================================================
+# CLEAR CONTEXT
+# =========================================================
 
-@app.route(
-    "/clear-context",
-    methods=["POST"]
-)
+@app.route("/clear-context", methods=["POST"])
 def clear_context():
 
-    try:
+    session.pop("chat_context", None)
 
-        session.pop(
-            "chat_context",
-            None
-        )
-
-        session.modified = True
-
-        return jsonify({
-            "success": True,
-            "message":
-            "Conversation context cleared."
-        })
-
-    except Exception as error:
-
-        print(
-            "Clear Context Error:",
-            error
-        )
-
-        return jsonify({
-            "success": False,
-            "message":
-            "Unable to clear conversation context."
-        }), 500
+    return jsonify({
+        "success": True,
+        "message": "Conversation context cleared."
+    })
 
 
-# =========================
+# =========================================================
 # CHAT HISTORY
-# =========================
+# =========================================================
 
 @app.route("/history")
 def history():
 
+    if not session.get("admin_logged_in"):
+        return redirect(url_for("admin_login"))
+
     conn = get_db_connection()
 
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        SELECT
-            id,
-            user_message,
-            bot_response,
-            timestamp
+    logs = conn.execute("""
+        SELECT *
         FROM chat_logs
         ORDER BY id DESC
-    """)
-
-    chats = cursor.fetchall()
+        LIMIT 100
+    """).fetchall()
 
     conn.close()
 
     return render_template(
         "history.html",
-        chats=chats
+        logs=logs
     )
 
 
-# =========================
+# =========================================================
 # ADMIN LOGIN
-# =========================
+# =========================================================
 
-@app.route(
-    "/admin/login",
-    methods=["GET", "POST"]
-)
+@app.route("/admin/login", methods=["GET", "POST"])
 def admin_login():
+
+    if session.get("admin_logged_in"):
+        return redirect(url_for("admin"))
+
+    error = None
 
     if request.method == "POST":
 
@@ -450,6 +320,29 @@ def admin_login():
             ""
         )
 
+        conn = get_db_connection()
+
+        admin = conn.execute("""
+            SELECT *
+            FROM admin_credentials
+            WHERE username = ?
+        """, (username,)).fetchone()
+
+        conn.close()
+
+        if admin and check_password_hash(
+            admin["password_hash"],
+            password
+        ):
+
+            session["admin_logged_in"] = True
+            session["admin_username"] = username
+
+            return redirect(url_for("admin"))
+
+        # Backward compatibility:
+        # If database account is not available,
+        # allow environment credentials.
         if (
             ADMIN_USERNAME
             and ADMIN_PASSWORD
@@ -458,374 +351,485 @@ def admin_login():
         ):
 
             session["admin_logged_in"] = True
+            session["admin_username"] = username
 
-            return redirect(
-                url_for("admin")
-            )
+            return redirect(url_for("admin"))
 
-        return render_template(
-            "admin_login.html",
-            error="Invalid username or password."
-        )
+        error = "Invalid username or password."
 
     return render_template(
         "admin_login.html",
-        error=None
+        error=error
     )
 
 
-# =========================
+# =========================================================
 # ADMIN LOGOUT
-# =========================
+# =========================================================
 
 @app.route("/admin/logout")
 def admin_logout():
 
-    session.pop(
-        "admin_logged_in",
-        None
-    )
+    session.pop("admin_logged_in", None)
+    session.pop("admin_username", None)
 
-    return redirect(
-        url_for("admin_login")
-    )
+    return redirect(url_for("admin_login"))
 
 
-# =========================
+# =========================================================
 # ADMIN DASHBOARD
-# =========================
+# =========================================================
 
 @app.route("/admin")
 def admin():
 
-    if not session.get(
-        "admin_logged_in"
-    ):
-
-        return redirect(
-            url_for("admin_login")
-        )
+    if not session.get("admin_logged_in"):
+        return redirect(url_for("admin_login"))
 
     conn = get_db_connection()
 
-    cursor = conn.cursor()
+    total_chats = conn.execute("""
+        SELECT COUNT(*) AS count
+        FROM chat_logs
+    """).fetchone()["count"]
 
+    today = datetime.now().strftime("%Y-%m-%d")
 
-    # =========================
-    # TOTAL CHATS
-    # =========================
+    today_chats = conn.execute("""
+        SELECT COUNT(*) AS count
+        FROM chat_logs
+        WHERE DATE(timestamp) = ?
+    """, (today,)).fetchone()["count"]
 
-    cursor.execute("""
+    total_responses = conn.execute("""
         SELECT COUNT(*)
         FROM chat_logs
-    """)
+        WHERE bot_response IS NOT NULL
+    """).fetchone()[0]
 
-    total_chats = cursor.fetchone()[0]
-
-
-    # =========================
-    # TODAY'S CHATS
-    # =========================
-
-    today = datetime.now().strftime(
-        "%Y-%m-%d"
-    )
-
-    cursor.execute("""
-        SELECT COUNT(*)
-        FROM chat_logs
-        WHERE timestamp LIKE ?
-    """, (
-        today + "%",
-    ))
-
-    today_chats = cursor.fetchone()[0]
-
-
-    # =========================
-    # TOTAL BOT RESPONSES
-    # =========================
-
-    cursor.execute("""
-        SELECT COUNT(bot_response)
-        FROM chat_logs
-    """)
-
-    total_responses = cursor.fetchone()[0]
-
-
-    # =========================
-    # RECENT ACTIVITY
-    # =========================
-
-    cursor.execute("""
-        SELECT
-            user_message,
-            bot_response,
-            timestamp
+    recent_chats = conn.execute("""
+        SELECT *
         FROM chat_logs
         ORDER BY id DESC
-        LIMIT 5
-    """)
+        LIMIT 10
+    """).fetchall()
 
-    recent_chats = cursor.fetchall()
-
-
-    # =========================
-    # LAST 7 DAYS ANALYTICS
-    # =========================
-
+    # Last 7 days
     daily_labels = []
     daily_counts = []
 
-    for days_ago in range(
-        6,
-        -1,
-        -1
-    ):
+    for i in range(6, -1, -1):
 
         date_value = (
-            datetime.now()
-            - timedelta(days=days_ago)
-        )
+            datetime.now() - timedelta(days=i)
+        ).strftime("%Y-%m-%d")
 
-        date_string = date_value.strftime(
-            "%Y-%m-%d"
-        )
-
-        display_date = date_value.strftime(
-            "%d %b"
-        )
-
-        cursor.execute("""
+        count = conn.execute("""
             SELECT COUNT(*)
             FROM chat_logs
-            WHERE timestamp LIKE ?
-        """, (
-            date_string + "%",
-        ))
+            WHERE DATE(timestamp) = ?
+        """, (date_value,)).fetchone()[0]
 
-        count = cursor.fetchone()[0]
+        daily_labels.append(date_value)
+        daily_counts.append(count)
 
-        daily_labels.append(
-            display_date
-        )
-
-        daily_counts.append(
-            count
-        )
-
-
-    # =========================
-    # INTENT ANALYTICS
-    # =========================
-
-    cursor.execute("""
+    # Intent analytics
+    intent_rows = conn.execute("""
         SELECT
-            intent,
+            COALESCE(intent, 'unknown') AS intent,
             COUNT(*) AS count
         FROM chat_logs
-        WHERE intent IS NOT NULL
-        AND intent != ''
         GROUP BY intent
         ORDER BY count DESC
-    """)
+    """).fetchall()
 
-    intent_rows = cursor.fetchall()
+    intent_labels = [
+        row["intent"]
+        for row in intent_rows
+    ]
 
-    intent_labels = []
-    intent_counts = []
-
-    for row in intent_rows:
-
-        intent_labels.append(
-            row["intent"].replace(
-                "_",
-                " "
-            ).title()
-        )
-
-        intent_counts.append(
-            row["count"]
-        )
-
+    intent_counts = [
+        row["count"]
+        for row in intent_rows
+    ]
 
     conn.close()
 
-
-    # =========================
-    # FAQ DATA
-    # =========================
-
-    faqs = load_faqs()
-
-    total_faqs = len(faqs)
-
-
-    # =========================
-    # RENDER DASHBOARD
-    # =========================
-
     return render_template(
         "admin.html",
-
-        faqs=faqs,
-
         total_chats=total_chats,
-
         today_chats=today_chats,
-
         total_responses=total_responses,
-
-        total_faqs=total_faqs,
-
         recent_chats=recent_chats,
-
-        daily_labels=daily_labels,
-
-        daily_counts=daily_counts,
-
-        intent_labels=intent_labels,
-
-        intent_counts=intent_counts
+        daily_labels=json.dumps(daily_labels),
+        daily_counts=json.dumps(daily_counts),
+        intent_labels=json.dumps(intent_labels),
+        intent_counts=json.dumps(intent_counts)
     )
 
 
-# =========================
+# =========================================================
 # ADD FAQ
-# =========================
+# =========================================================
 
-@app.route(
-    "/admin/add",
-    methods=["POST"]
-)
+@app.route("/admin/add", methods=["POST"])
 def add_faq():
 
-    if not session.get(
-        "admin_logged_in"
-    ):
-
-        return redirect(
-            url_for("admin_login")
-        )
-
+    if not session.get("admin_logged_in"):
+        return redirect(url_for("admin_login"))
 
     question = request.form.get(
         "question",
         ""
     ).strip()
 
-
-    keywords_text = request.form.get(
-        "keywords",
-        ""
-    ).strip()
-
-
     answer = request.form.get(
         "answer",
         ""
     ).strip()
 
+    if question and answer:
 
-    if (
-        not question
-        or not keywords_text
-        or not answer
-    ):
+        faqs = load_faqs()
 
-        return redirect(
-            url_for("admin")
-        )
+        faqs.append({
+            "question": question,
+            "answer": answer
+        })
 
+        save_faqs(faqs)
 
-    keywords = [
-
-        keyword.strip()
-
-        for keyword
-        in keywords_text.split(",")
-
-        if keyword.strip()
-
-    ]
+    return redirect(url_for("admin"))
 
 
-    if not keywords:
-
-        return redirect(
-            url_for("admin")
-        )
-
-
-    faqs = load_faqs()
-
-
-    faqs.append({
-
-        "question": question,
-
-        "keywords": keywords,
-
-        "answer": answer
-
-    })
-
-
-    save_faqs(
-        faqs
-    )
-
-
-    return redirect(
-        url_for("admin")
-    )
-
-
-# =========================
+# =========================================================
 # DELETE FAQ
-# =========================
+# =========================================================
 
-@app.route(
-    "/admin/delete/<int:index>",
-    methods=["POST"]
-)
+@app.route("/admin/delete/<int:index>")
 def delete_faq(index):
 
-    if not session.get(
-        "admin_logged_in"
-    ):
-
-        return redirect(
-            url_for("admin_login")
-        )
-
+    if not session.get("admin_logged_in"):
+        return redirect(url_for("admin_login"))
 
     faqs = load_faqs()
-
 
     if 0 <= index < len(faqs):
 
         faqs.pop(index)
 
-        save_faqs(
-            faqs
+        save_faqs(faqs)
+
+    return redirect(url_for("admin"))
+
+
+# =========================================================
+# FORGOT PASSWORD
+# =========================================================
+
+@app.route("/admin/forgot-password", methods=["GET", "POST"])
+def forgot_password():
+
+    message = None
+    error = None
+
+    if request.method == "POST":
+
+        username = request.form.get(
+            "username",
+            ""
+        ).strip()
+
+        if not username:
+
+            error = "Please enter your admin username."
+
+            return render_template(
+                "forgot_password.html",
+                message=message,
+                error=error
+            )
+
+        conn = get_db_connection()
+
+        admin = conn.execute("""
+            SELECT username
+            FROM admin_credentials
+            WHERE username = ?
+        """, (username,)).fetchone()
+
+        if not admin:
+
+            conn.close()
+
+            error = "Admin account was not found."
+
+            return render_template(
+                "forgot_password.html",
+                message=message,
+                error=error
+            )
+
+        # Check email configuration
+        if not ADMIN_EMAIL:
+
+            conn.close()
+
+            error = (
+                "Password reset email is not configured yet. "
+                "Please configure ADMIN_EMAIL in environment variables."
+            )
+
+            return render_template(
+                "forgot_password.html",
+                message=message,
+                error=error
+            )
+
+        # Generate secure token
+        token = secrets.token_urlsafe(32)
+
+        expires_at = (
+            datetime.utcnow() + timedelta(minutes=15)
+        ).strftime("%Y-%m-%d %H:%M:%S")
+
+        # Invalidate previous unused tokens
+        conn.execute("""
+            UPDATE password_reset_tokens
+            SET used = 1
+            WHERE username = ?
+            AND used = 0
+        """, (username,))
+
+        conn.execute("""
+            INSERT INTO password_reset_tokens
+            (username, token, expires_at, used)
+            VALUES (?, ?, ?, 0)
+        """, (
+            username,
+            token,
+            expires_at
+        ))
+
+        conn.commit()
+        conn.close()
+
+        reset_link = url_for(
+            "reset_password",
+            token=token,
+            _external=True
         )
 
+        email_sent = send_reset_email(
+            username,
+            reset_link
+        )
 
-    return redirect(
-        url_for("admin")
+        if email_sent:
+
+            message = (
+                "A password reset link has been sent "
+                "to the registered admin email."
+            )
+
+        else:
+
+            error = (
+                "Unable to send the reset email. "
+                "Please check SMTP environment variables."
+            )
+
+    return render_template(
+        "forgot_password.html",
+        message=message,
+        error=error
     )
 
 
-# =========================
-# START APPLICATION
-# =========================
+# =========================================================
+# SEND RESET EMAIL
+# =========================================================
 
-# Initialize database when the
-# application starts, including Gunicorn.
+def send_reset_email(username, reset_link):
+
+    if not all([
+        SMTP_HOST,
+        SMTP_USERNAME,
+        SMTP_PASSWORD,
+        ADMIN_EMAIL
+    ]):
+        print("SMTP configuration is incomplete.")
+        return False
+
+    try:
+
+        message = EmailMessage()
+
+        message["Subject"] = "AI Support Chatbot - Password Reset"
+
+        message["From"] = SMTP_USERNAME
+        message["To"] = ADMIN_EMAIL
+
+        message.set_content(
+            f"""
+Hello {username},
+
+A password reset was requested for your AI Support Chatbot admin account.
+
+Use the link below to create a new password:
+
+{reset_link}
+
+This link will expire in 15 minutes.
+
+If you did not request this password reset, you can safely ignore this email.
+
+AI Support Chatbot
+"""
+        )
+
+        with smtplib.SMTP(
+            SMTP_HOST,
+            SMTP_PORT
+        ) as server:
+
+            server.starttls()
+
+            server.login(
+                SMTP_USERNAME,
+                SMTP_PASSWORD
+            )
+
+            server.send_message(message)
+
+        return True
+
+    except Exception as e:
+
+        print("Email sending error:", e)
+
+        return False
+
+
+# =========================================================
+# RESET PASSWORD
+# =========================================================
+
+@app.route("/admin/reset-password/<token>", methods=["GET", "POST"])
+def reset_password(token):
+
+    conn = get_db_connection()
+
+    reset_record = conn.execute("""
+        SELECT *
+        FROM password_reset_tokens
+        WHERE token = ?
+        AND used = 0
+    """, (token,)).fetchone()
+
+    if not reset_record:
+
+        conn.close()
+
+        return render_template(
+            "reset_password.html",
+            error="This password reset link is invalid or has already been used.",
+            success=None
+        )
+
+    expires_at = datetime.strptime(
+        reset_record["expires_at"],
+        "%Y-%m-%d %H:%M:%S"
+    )
+
+    if datetime.utcnow() > expires_at:
+
+        conn.close()
+
+        return render_template(
+            "reset_password.html",
+            error="This password reset link has expired.",
+            success=None
+        )
+
+    error = None
+    success = None
+
+    if request.method == "POST":
+
+        new_password = request.form.get(
+            "password",
+            ""
+        )
+
+        confirm_password = request.form.get(
+            "confirm_password",
+            ""
+        )
+
+        if len(new_password) < 8:
+
+            error = "Password must be at least 8 characters long."
+
+        elif new_password != confirm_password:
+
+            error = "Passwords do not match."
+
+        else:
+
+            password_hash = generate_password_hash(
+                new_password
+            )
+
+            conn.execute("""
+                UPDATE admin_credentials
+                SET password_hash = ?
+                WHERE username = ?
+            """, (
+                password_hash,
+                reset_record["username"]
+            ))
+
+            # Mark token as used
+            conn.execute("""
+                UPDATE password_reset_tokens
+                SET used = 1
+                WHERE token = ?
+            """, (token,))
+
+            conn.commit()
+            conn.close()
+
+            success = (
+                "Password changed successfully. "
+                "You can now login with your new password."
+            )
+
+            return render_template(
+                "reset_password.html",
+                error=None,
+                success=success
+            )
+
+    conn.close()
+
+    return render_template(
+        "reset_password.html",
+        error=error,
+        success=success
+    )
+
+
+# =========================================================
+# INITIALIZE DATABASE
+# =========================================================
+
 init_db()
 
+
+# =========================================================
+# RUN APPLICATION
+# =========================================================
 
 if __name__ == "__main__":
 
