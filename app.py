@@ -377,7 +377,7 @@ def add_faq():
 
 # ========================= DELETE FAQ =========================
 
-@app.route("/admin/delete/<int:index>")
+@app.route("/admin/delete/<int:index>", methods=["POST"])
 def delete_faq(index):
     if not session.get("admin_logged_in"):
         return redirect(url_for("admin_login"))
