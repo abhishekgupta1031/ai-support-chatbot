@@ -4,6 +4,8 @@ import os
 import re
 
 from nltk.stem import PorterStemmer
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 
 
 # =========================
@@ -87,9 +89,16 @@ intents = {
 
     "greeting": {
         "keywords": [
-            "hello", "hi", "hey", "namaste",
-            "hii", "helo", "morning", "afternoon"
+            "hello",
+            "hi",
+            "hey",
+            "namaste",
+            "hii",
+            "helo",
+            "morning",
+            "afternoon"
         ],
+
         "responses": [
             "Hello! 👋 How can I help you today?",
             "Hi! Welcome to our AI Support Chatbot.",
@@ -99,9 +108,14 @@ intents = {
 
     "how_are_you": {
         "keywords": [
-            "how", "are", "you", "doing",
-            "well", "good"
+            "how",
+            "are",
+            "you",
+            "doing",
+            "well",
+            "good"
         ],
+
         "responses": [
             "I'm doing great! Thanks for asking. 😊",
             "I'm good and ready to help you!",
@@ -111,8 +125,11 @@ intents = {
 
     "name": {
         "keywords": [
-            "name", "called", "who"
+            "name",
+            "called",
+            "who"
         ],
+
         "responses": [
             "I'm an AI-Powered Customer Support Chatbot. 🤖",
             "You can call me AI Support Assistant."
@@ -121,9 +138,14 @@ intents = {
 
     "help": {
         "keywords": [
-            "help", "support", "problem",
-            "issue", "assist", "assistance"
+            "help",
+            "support",
+            "problem",
+            "issue",
+            "assist",
+            "assistance"
         ],
+
         "responses": [
             "Sure! I can help with orders, payments, refunds, delivery and account issues.",
             "Of course! Please describe your problem and I'll try to help."
@@ -132,11 +154,18 @@ intents = {
 
     "order": {
         "keywords": [
-            "order", "orders", "ordered",
-            "purchase", "buy", "bought",
-            "shipment", "package",
-            "track", "tracking"
+            "order",
+            "orders",
+            "ordered",
+            "purchase",
+            "buy",
+            "bought",
+            "shipment",
+            "package",
+            "track",
+            "tracking"
         ],
+
         "responses": [
             "Sure! Please provide your order ID so I can help you.",
             "I can help with your order. Please share your order ID.",
@@ -146,10 +175,17 @@ intents = {
 
     "delivery": {
         "keywords": [
-            "delivery", "deliver", "arrive",
-            "shipping", "ship", "courier",
-            "days", "late", "delay"
+            "delivery",
+            "deliver",
+            "arrive",
+            "shipping",
+            "ship",
+            "courier",
+            "days",
+            "late",
+            "delay"
         ],
+
         "responses": [
             "Standard delivery usually takes 3–5 business days.",
             "Your delivery time depends on your location and shipping method.",
@@ -159,9 +195,14 @@ intents = {
 
     "refund": {
         "keywords": [
-            "refund", "refunds", "money",
-            "return", "returned", "reimburse"
+            "refund",
+            "refunds",
+            "money",
+            "return",
+            "returned",
+            "reimburse"
         ],
+
         "responses": [
             "I can help with your refund. Please provide your order ID and the reason for the refund.",
             "Refunds are usually processed within 5–7 business days after approval.",
@@ -171,10 +212,18 @@ intents = {
 
     "payment": {
         "keywords": [
-            "payment", "pay", "paid", "card",
-            "transaction", "charge", "charged",
-            "debit", "deducted", "bank"
+            "payment",
+            "pay",
+            "paid",
+            "card",
+            "transaction",
+            "charge",
+            "charged",
+            "debit",
+            "deducted",
+            "bank"
         ],
+
         "responses": [
             "If your payment failed, please check your payment details or try another payment method.",
             "If money was deducted but your order was not confirmed, please contact support with your transaction details.",
@@ -184,9 +233,14 @@ intents = {
 
     "account": {
         "keywords": [
-            "account", "profile", "login",
-            "signin", "access", "username"
+            "account",
+            "profile",
+            "login",
+            "signin",
+            "access",
+            "username"
         ],
+
         "responses": [
             "I can help with account-related issues. What problem are you facing?",
             "For account problems, please check your registered email and login details."
@@ -195,9 +249,13 @@ intents = {
 
     "password": {
         "keywords": [
-            "password", "forgot", "reset",
-            "forgotten", "change"
+            "password",
+            "forgot",
+            "reset",
+            "forgotten",
+            "change"
         ],
+
         "responses": [
             "If you forgot your password, use the 'Forgot Password' option on the login page.",
             "You can reset your password using your registered email address."
@@ -206,9 +264,12 @@ intents = {
 
     "cancel": {
         "keywords": [
-            "cancel", "cancellation",
-            "cancelled", "stop"
+            "cancel",
+            "cancellation",
+            "cancelled",
+            "stop"
         ],
+
         "responses": [
             "I can help with order cancellation. Please provide your order ID.",
             "Orders can usually be cancelled before they are shipped."
@@ -217,9 +278,13 @@ intents = {
 
     "thanks": {
         "keywords": [
-            "thank", "thanks",
-            "thankyou", "thx", "appreciate"
+            "thank",
+            "thanks",
+            "thankyou",
+            "thx",
+            "appreciate"
         ],
+
         "responses": [
             "You're welcome! 😊",
             "Happy to help!",
@@ -229,9 +294,13 @@ intents = {
 
     "bye": {
         "keywords": [
-            "bye", "goodbye",
-            "see", "later", "exit"
+            "bye",
+            "goodbye",
+            "see",
+            "later",
+            "exit"
         ],
+
         "responses": [
             "Goodbye! Have a great day! 👋",
             "See you soon!",
@@ -242,7 +311,59 @@ intents = {
 
 
 # =========================
-# CALCULATE SIMILARITY
+# PREPARE TF-IDF MODEL
+# =========================
+
+intent_names = list(intents.keys())
+
+intent_documents = [
+    " ".join(intents[intent]["keywords"])
+    for intent in intent_names
+]
+
+vectorizer = TfidfVectorizer(
+    lowercase=True,
+    ngram_range=(1, 2),
+    sublinear_tf=True
+)
+
+intent_vectors = vectorizer.fit_transform(
+    intent_documents
+)
+
+
+# =========================
+# TF-IDF INTENT MATCHING
+# =========================
+
+def find_tfidf_intent(message):
+
+    if not message.strip():
+        return None, 0.0
+
+    user_vector = vectorizer.transform(
+        [message.lower()]
+    )
+
+    similarities = cosine_similarity(
+        user_vector,
+        intent_vectors
+    )[0]
+
+    best_index = similarities.argmax()
+
+    best_score = float(
+        similarities[best_index]
+    )
+
+    return (
+        intent_names[best_index],
+        best_score
+    )
+
+
+# =========================
+# KEYWORD SIMILARITY
 # =========================
 
 def calculate_score(
@@ -299,12 +420,76 @@ def find_faq_response(message):
 
     faqs = load_faqs()
 
+    if not faqs:
+        return None
+
+    faq_questions = []
+    faq_answers = []
+
+    for faq in faqs:
+
+        question = faq.get(
+            "question",
+            ""
+        )
+
+        if question:
+
+            faq_questions.append(
+                question
+            )
+
+            faq_answers.append(
+                faq.get(
+                    "answer",
+                    ""
+                )
+            )
+
+    if not faq_questions:
+        return None
+
+    try:
+
+        faq_vectorizer = TfidfVectorizer(
+            lowercase=True,
+            ngram_range=(1, 2),
+            sublinear_tf=True
+        )
+
+        faq_vectors = faq_vectorizer.fit_transform(
+            faq_questions
+        )
+
+        user_vector = faq_vectorizer.transform(
+            [message]
+        )
+
+        similarities = cosine_similarity(
+            user_vector,
+            faq_vectors
+        )[0]
+
+        best_index = similarities.argmax()
+
+        best_score = float(
+            similarities[best_index]
+        )
+
+        if best_score >= 0.35:
+
+            return faq_answers[
+                best_index
+            ]
+
+    except ValueError:
+        pass
+
+    # Keyword fallback
+
     user_words = tokenize(
         message
     )
-
-    if not user_words:
-        return None
 
     best_answer = None
     best_score = 0
@@ -333,43 +518,10 @@ def find_faq_response(message):
         best_answer
         and best_score >= 1.0
     ):
+
         return best_answer
 
     return None
-
-
-# =========================
-# FIND BEST INTENT
-# =========================
-
-def find_best_intent(message):
-
-    words = tokenize(
-        message
-    )
-
-    if not words:
-        return None, 0
-
-    best_intent = None
-    best_score = 0
-
-    for intent, data in intents.items():
-
-        score = calculate_score(
-            words,
-            data["keywords"]
-        )
-
-        if score > best_score:
-
-            best_score = score
-            best_intent = intent
-
-    return (
-        best_intent,
-        best_score
-    )
 
 
 # =========================
@@ -377,26 +529,6 @@ def find_best_intent(message):
 # =========================
 
 def extract_order_id(message):
-
-    """
-    Detect actual order IDs only.
-
-    Valid:
-    ORD12345
-    ORD-12345
-    ORD 12345
-
-    ORDER12345
-    ORDER-12345
-    ORDER 12345
-
-    #12345
-
-    Invalid:
-    order problem
-    order status
-    my order
-    """
 
     patterns = [
 
@@ -424,6 +556,7 @@ def extract_order_id(message):
                 "order",
                 "orders"
             ]:
+
                 continue
 
             return order_id
@@ -432,7 +565,7 @@ def extract_order_id(message):
 
 
 # =========================
-# CONTEXT RESPONSE
+# SMART CONTEXT RESPONSE
 # =========================
 
 def handle_context(
@@ -445,9 +578,9 @@ def handle_context(
 
     message_lower = message.lower().strip()
 
-    # ==================================
+    # =========================
     # ORDER ID
-    # ==================================
+    # =========================
 
     order_id = extract_order_id(
         message
@@ -456,28 +589,37 @@ def handle_context(
     if order_id:
 
         context["order_id"] = order_id
-
-        # Important:
-        # If user gives an order ID,
-        # remember that the current topic
-        # is order-related.
         context["last_intent"] = "order"
+        context["last_message"] = message
 
         return (
             f"Thanks! 👍 I received your "
             f"order ID **{order_id}**.\n\n"
             "I can help you with the order "
             "status, delivery, cancellation, "
-            "or other order-related questions."
+            "refund, or other order-related questions."
         )
 
-    # ==================================
+    # =========================
     # ORDER STATUS
-    # ==================================
+    # =========================
 
-    if "status" in message_lower:
+    if any(
+        word in message_lower
+        for word in [
+            "status",
+            "where is my order",
+            "where's my order",
+            "track my order",
+            "track order",
+            "tracking"
+        ]
+    ):
 
         if context.get("order_id"):
+
+            context["last_intent"] = "order"
+            context["last_message"] = message
 
             return (
                 f"For order "
@@ -488,70 +630,294 @@ def handle_context(
 
         if context.get("last_intent") == "order":
 
+            context["last_message"] = message
+
             return (
                 "Sure! Please provide your "
                 "order ID so I can help you "
                 "check the order status."
             )
 
-    # ==================================
-    # FOLLOW-UP QUESTIONS
-    # ==================================
+    # =========================
+    # ORDER + DELIVERY
+    # =========================
 
-    if context.get("last_intent"):
-
-        last_intent = context[
-            "last_intent"
+    if any(
+        word in message_lower
+        for word in [
+            "delivery",
+            "delivered",
+            "arrive",
+            "shipping",
+            "shipment",
+            "courier"
         ]
+    ):
 
-        # User says YES
+        if context.get("order_id"):
 
-        if message_lower in [
-            "yes",
-            "yeah",
-            "yep",
-            "sure",
-            "ok",
-            "okay"
-        ]:
+            context["last_intent"] = "delivery"
+            context["last_message"] = message
 
-            if last_intent == "order":
+            return (
+                f"For order "
+                f"{context['order_id']}, "
+                "standard delivery usually "
+                "takes 3–5 business days. "
+                "For the latest delivery update, "
+                "please contact support."
+            )
+
+    # =========================
+    # ORDER + REFUND
+    # =========================
+
+    if any(
+        word in message_lower
+        for word in [
+            "refund",
+            "return",
+            "money back",
+            "reimburse"
+        ]
+    ):
+
+        if context.get("order_id"):
+
+            context["last_intent"] = "refund"
+            context["last_message"] = message
+
+            return (
+                f"I can help with the refund "
+                f"for order {context['order_id']}. "
+                "Please provide the reason for "
+                "the refund so support can assist you."
+            )
+
+    # =========================
+    # ORDER + CANCELLATION
+    # =========================
+
+    if any(
+        word in message_lower
+        for word in [
+            "cancel",
+            "cancellation",
+            "cancelled"
+        ]
+    ):
+
+        if context.get("order_id"):
+
+            context["last_intent"] = "cancel"
+            context["last_message"] = message
+
+            return (
+                f"I can help with cancellation "
+                f"for order {context['order_id']}. "
+                "Orders can usually be cancelled "
+                "before they are shipped."
+            )
+
+    # =========================
+    # GENERIC FOLLOW-UP
+    # =========================
+
+    follow_up_messages = [
+        "what about it",
+        "what about that",
+        "and it",
+        "and that",
+        "what about this",
+        "tell me more",
+        "more information",
+        "more info",
+        "what next",
+        "then what",
+        "now what"
+    ]
+
+    if message_lower in follow_up_messages:
+
+        last_intent = context.get(
+            "last_intent"
+        )
+
+        if last_intent == "order":
+
+            if context.get("order_id"):
 
                 return (
-                    "Sure! Please provide your "
-                    "order ID so I can help you "
-                    "check the order."
+                    f"For order "
+                    f"{context['order_id']}, "
+                    "I can help with status, "
+                    "delivery, refund, or cancellation."
                 )
 
-            if last_intent == "delivery":
+            return (
+                "I can help with your order. "
+                "Please provide your order ID."
+            )
 
-                return (
-                    "Sure! Please provide your "
-                    "order ID and I'll help you "
-                    "with the delivery."
-                )
+        if last_intent == "delivery":
 
-            if last_intent == "refund":
+            return (
+                "For delivery assistance, "
+                "please provide your order ID."
+            )
 
-                return (
-                    "Sure! Please provide your "
-                    "order ID and I'll help you "
-                    "with the refund."
-                )
+        if last_intent == "refund":
 
-            if last_intent == "cancel":
+            return (
+                "For refund assistance, "
+                "please provide your order ID "
+                "and the reason for the refund."
+            )
 
-                return (
-                    "Sure! Please provide your "
-                    "order ID and I'll help you "
-                    "with the cancellation."
-                )
+        if last_intent == "cancel":
+
+            return (
+                "For cancellation assistance, "
+                "please provide your order ID."
+            )
+
+    # =========================
+    # YES / CONFIRMATION
+    # =========================
+
+    if message_lower in [
+        "yes",
+        "yeah",
+        "yep",
+        "sure",
+        "ok",
+        "okay",
+        "please do",
+        "yes please"
+    ]:
+
+        last_intent = context.get(
+            "last_intent"
+        )
+
+        if last_intent == "order":
+
+            return (
+                "Sure! Please provide your "
+                "order ID so I can help you "
+                "check the order."
+            )
+
+        if last_intent == "delivery":
+
+            return (
+                "Sure! Please provide your "
+                "order ID and I'll help you "
+                "with the delivery."
+            )
+
+        if last_intent == "refund":
+
+            return (
+                "Sure! Please provide your "
+                "order ID and I'll help you "
+                "with the refund."
+            )
+
+        if last_intent == "cancel":
+
+            return (
+                "Sure! Please provide your "
+                "order ID and I'll help you "
+                "with the cancellation."
+            )
+
+    # =========================
+    # SAVE LAST MESSAGE
+    # =========================
+
+    context["last_message"] = message
 
     return None
 
 
 # =========================
-# MAIN RESPONSE FUNCTION
+# BEST INTENT
+# =========================
+
+def find_best_intent(message):
+
+    words = tokenize(
+        message
+    )
+
+    if not words:
+        return None, 0
+
+    # Traditional keyword score
+
+    keyword_best_intent = None
+    keyword_best_score = 0
+
+    for intent, data in intents.items():
+
+        score = calculate_score(
+            words,
+            data["keywords"]
+        )
+
+        if score > keyword_best_score:
+
+            keyword_best_score = score
+            keyword_best_intent = intent
+
+    # Advanced TF-IDF score
+
+    tfidf_intent, tfidf_score = (
+        find_tfidf_intent(
+            message
+        )
+    )
+
+    # Combine both methods
+
+    if keyword_best_intent is None:
+
+        return (
+            tfidf_intent,
+            tfidf_score
+        )
+
+    if tfidf_score >= 0.35:
+
+        if (
+            tfidf_intent
+            == keyword_best_intent
+        ):
+
+            combined_score = (
+                keyword_best_score
+                + tfidf_score
+            )
+
+            return (
+                keyword_best_intent,
+                combined_score
+            )
+
+        return (
+            tfidf_intent,
+            tfidf_score
+        )
+
+    return (
+        keyword_best_intent,
+        keyword_best_score
+    )
+
+
+# =========================
+# MAIN RESPONSE
 # =========================
 
 def get_response(
@@ -573,9 +939,9 @@ def get_response(
     if context is None:
         context = {}
 
-    # ==================================
+    # =========================
     # STEP 1: CONTEXT
-    # ==================================
+    # =========================
 
     context_response = handle_context(
         message,
@@ -585,23 +951,28 @@ def get_response(
     if context_response:
         return context_response
 
-    # ==================================
+    # =========================
     # STEP 2: FAQ
-    # ==================================
+    # =========================
 
     faq_response = find_faq_response(
         message
     )
 
     if faq_response:
+
+        context["last_message"] = message
+
         return faq_response
 
-    # ==================================
+    # =========================
     # STEP 3: INTENT
-    # ==================================
+    # =========================
 
-    best_intent, best_score = find_best_intent(
-        message
+    best_intent, best_score = (
+        find_best_intent(
+            message
+        )
     )
 
     if best_intent:
@@ -610,9 +981,11 @@ def get_response(
             best_intent
         )
 
-    # ==================================
+        context["last_message"] = message
+
+    # =========================
     # NO INTENT
-    # ==================================
+    # =========================
 
     if not best_intent:
 
@@ -630,21 +1003,24 @@ def get_response(
             "question in another way."
         )
 
-    # ==================================
+    # =========================
     # CONFIDENCE
-    # ==================================
+    # =========================
 
     total_words = len(
         words
     )
 
     confidence = (
-        best_score / total_words
+        best_score / max(
+            total_words,
+            1
+        )
     )
 
-    # ==================================
+    # =========================
     # STRONG MATCH
-    # ==================================
+    # =========================
 
     if (
         best_score >= 1.5
@@ -657,9 +1033,9 @@ def get_response(
             ]["responses"]
         )
 
-    # ==================================
+    # =========================
     # MEDIUM MATCH
-    # ==================================
+    # =========================
 
     if (
         best_score >= 0.8
@@ -676,9 +1052,9 @@ def get_response(
             )
         )
 
-    # ==================================
+    # =========================
     # SMART FALLBACK
-    # ==================================
+    # =========================
 
     return (
         "I'm not completely sure "
