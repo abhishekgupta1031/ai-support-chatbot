@@ -18,10 +18,7 @@
 
     <div class="chat-container">
 
-        <!-- ============================= -->
         <!-- HEADER -->
-        <!-- ============================= -->
-
         <header class="chat-header">
 
             <div class="bot-info">
@@ -62,10 +59,7 @@
         </header>
 
 
-        <!-- ============================= -->
         <!-- CHAT AREA -->
-        <!-- ============================= -->
-
         <main id="chat-box"
               class="chat-box"
               aria-live="polite"
@@ -86,27 +80,23 @@
 
                 <div class="quick-options">
 
-                    <button
-                        type="button"
-                        onclick="quickMessage('Where is my order?')">
+                    <button type="button"
+                            onclick="quickMessage('Where is my order?')">
                         📦 Order Status
                     </button>
 
-                    <button
-                        type="button"
-                        onclick="quickMessage('I want a refund')">
+                    <button type="button"
+                            onclick="quickMessage('I want a refund')">
                         💰 Refund
                     </button>
 
-                    <button
-                        type="button"
-                        onclick="quickMessage('My payment failed')">
+                    <button type="button"
+                            onclick="quickMessage('My payment failed')">
                         💳 Payment
                     </button>
 
-                    <button
-                        type="button"
-                        onclick="quickMessage('I forgot my password')">
+                    <button type="button"
+                            onclick="quickMessage('I forgot my password')">
                         🔐 Password
                     </button>
 
@@ -117,10 +107,7 @@
         </main>
 
 
-        <!-- ============================= -->
         <!-- TYPING INDICATOR -->
-        <!-- ============================= -->
-
         <div id="typing"
              class="typing"
              role="status"
@@ -130,22 +117,16 @@
 
             <span>AI is typing</span>
 
-            <div class="typing-dots"
-                 aria-hidden="true">
-
+            <div class="typing-dots" aria-hidden="true">
                 <span></span>
                 <span></span>
                 <span></span>
-
             </div>
 
         </div>
 
 
-        <!-- ============================= -->
         <!-- INPUT AREA -->
-        <!-- ============================= -->
-
         <div class="input-area">
 
             <input
@@ -171,14 +152,12 @@
         </div>
 
 
-        <!-- ============================= -->
         <!-- FOOTER -->
-        <!-- ============================= -->
-
         <div class="chat-footer">
 
             <button
                 type="button"
+                id="clear-button"
                 onclick="clearChat()"
                 class="clear-btn">
 
@@ -195,20 +174,16 @@
     </div>
 
 
-    <!-- ============================= -->
     <!-- JAVASCRIPT -->
-    <!-- ============================= -->
-
     <script>
 
-        const input =
-            document.getElementById("user-input");
+        // ========================================
+        // ELEMENTS
+        // ========================================
 
-        const chatBox =
-            document.getElementById("chat-box");
-
-        const typing =
-            document.getElementById("typing");
+        const input = document.getElementById("user-input");
+        const chatBox = document.getElementById("chat-box");
+        const typing = document.getElementById("typing");
 
         const sendButton =
             document.getElementById("send-button");
@@ -218,6 +193,9 @@
 
         const sendIcon =
             document.getElementById("send-icon");
+
+        const clearButton =
+            document.getElementById("clear-button");
 
 
         // ========================================
@@ -231,49 +209,41 @@
         // ENTER KEY
         // ========================================
 
-        input.addEventListener(
-            "keydown",
-            function(event) {
+        input.addEventListener("keydown", function(event) {
 
-                if (
-                    event.key === "Enter" &&
-                    !event.shiftKey
-                ) {
+            if (
+                event.key === "Enter" &&
+                !event.shiftKey
+            ) {
 
-                    event.preventDefault();
+                event.preventDefault();
 
+                if (!isSending) {
                     sendMessage();
-
                 }
 
             }
-        );
+
+        });
 
 
         // ========================================
         // INPUT STATE
         // ========================================
 
-        input.addEventListener(
-            "input",
-            function() {
+        input.addEventListener("input", function() {
 
-                if (input.value.trim()) {
+            if (input.value.trim() && !isSending) {
 
-                    sendButton.classList.add(
-                        "ready"
-                    );
+                sendButton.classList.add("ready");
 
-                } else {
+            } else {
 
-                    sendButton.classList.remove(
-                        "ready"
-                    );
-
-                }
+                sendButton.classList.remove("ready");
 
             }
-        );
+
+        });
 
 
         // ========================================
@@ -301,13 +271,13 @@
 
         async function sendMessage() {
 
+            // Prevent duplicate click while current
+            // request is being processed.
             if (isSending) {
                 return;
             }
 
-            const message =
-                input.value.trim();
-
+            const message = input.value.trim();
 
             if (!message) {
 
@@ -318,75 +288,75 @@
             }
 
 
+            // Lock sending state
             isSending = true;
 
 
-            // --------------------------------
-            // Remove Welcome Screen
-            // --------------------------------
+            // ----------------------------------------
+            // Remove welcome screen
+            // ----------------------------------------
 
             const welcome =
-                document.querySelector(
-                    ".welcome-message"
-                );
+                document.querySelector(".welcome-message");
 
             if (welcome) {
                 welcome.remove();
             }
 
 
-            // --------------------------------
-            // Add User Message
-            // --------------------------------
+            // ----------------------------------------
+            // Add user message immediately
+            // ----------------------------------------
 
-            addMessage(
-                message,
-                "user"
-            );
+            addMessage(message, "user");
 
 
-            // --------------------------------
-            // Reset Input
-            // --------------------------------
+            // ----------------------------------------
+            // Clear input
+            // ----------------------------------------
 
             input.value = "";
 
-            sendButton.classList.remove(
-                "ready"
-            );
+            sendButton.classList.remove("ready");
 
 
-            // --------------------------------
-            // Loading State
-            // --------------------------------
+            // ----------------------------------------
+            // Loading state
+            // ----------------------------------------
 
             setLoadingState(true);
 
 
             try {
 
-                const response =
-                    await fetch(
-                        "/chat",
-                        {
-                            method: "POST",
+                // ------------------------------------
+                // Send request to Flask
+                // ------------------------------------
 
-                            headers: {
-                                "Content-Type":
-                                    "application/json"
-                            },
+                const response = await fetch("/chat", {
 
-                            body: JSON.stringify({
-                                message: message
-                            })
-                        }
-                    );
+                    method: "POST",
 
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Accept": "application/json"
+                    },
+
+                    body: JSON.stringify({
+                        message: message
+                    })
+
+                });
+
+
+                // ------------------------------------
+                // Check server response
+                // ------------------------------------
 
                 if (!response.ok) {
 
                     throw new Error(
-                        "Server error: " +
+                        "Server returned HTTP " +
                         response.status
                     );
 
@@ -397,34 +367,25 @@
                     await response.json();
 
 
-                // --------------------------------
-                // Natural Typing Delay
-                // --------------------------------
+                // ------------------------------------
+                // Natural typing delay
+                // ------------------------------------
 
-                await new Promise(
-                    resolve =>
-                        setTimeout(
-                            resolve,
-                            600
-                        )
-                );
+                await new Promise(function(resolve) {
+
+                    setTimeout(resolve, 600);
+
+                });
 
 
-                // --------------------------------
-                // Hide Typing
-                // --------------------------------
-
-                typing.style.display =
-                    "none";
-
-
-                // --------------------------------
-                // Bot Response
-                // --------------------------------
+                // ------------------------------------
+                // Bot response
+                // ------------------------------------
 
                 if (
                     data &&
-                    typeof data.response === "string"
+                    typeof data.response === "string" &&
+                    data.response.trim() !== ""
                 ) {
 
                     addMessage(
@@ -450,10 +411,6 @@
                 );
 
 
-                typing.style.display =
-                    "none";
-
-
                 addMessage(
                     "Sorry, something went wrong. Please try again. 😔",
                     "bot"
@@ -462,9 +419,30 @@
 
             } finally {
 
+                // ------------------------------------
+                // ALWAYS unlock chat
+                // ------------------------------------
+
+                isSending = false;
+
                 setLoadingState(false);
 
+                input.disabled = false;
+                sendButton.disabled = false;
+
                 input.focus();
+
+
+                // Restore ready state if needed
+                if (input.value.trim()) {
+
+                    sendButton.classList.add("ready");
+
+                } else {
+
+                    sendButton.classList.remove("ready");
+
+                }
 
             }
 
@@ -479,45 +457,41 @@
 
             if (loading) {
 
-                typing.style.display =
-                    "flex";
+                typing.style.display = "flex";
 
-                sendButton.disabled =
-                    true;
+                sendButton.disabled = true;
 
-                input.disabled =
-                    true;
+                input.disabled = true;
 
-                sendText.textContent =
-                    "Sending";
+                sendText.textContent = "Sending";
 
-                sendIcon.textContent =
-                    "⏳";
+                sendIcon.textContent = "⏳";
 
-                sendButton.classList.add(
-                    "loading"
-                );
+                sendButton.classList.add("loading");
+
+
+                if (clearButton) {
+                    clearButton.disabled = false;
+                }
 
             } else {
 
-                typing.style.display =
-                    "none";
+                typing.style.display = "none";
 
-                sendButton.disabled =
-                    false;
+                sendButton.disabled = false;
 
-                input.disabled =
-                    false;
+                input.disabled = false;
 
-                sendText.textContent =
-                    "Send";
+                sendText.textContent = "Send";
 
-                sendIcon.textContent =
-                    "➤";
+                sendIcon.textContent = "➤";
 
-                sendButton.classList.remove(
-                    "loading"
-                );
+                sendButton.classList.remove("loading");
+
+
+                if (clearButton) {
+                    clearButton.disabled = false;
+                }
 
             }
 
@@ -528,26 +502,21 @@
         // ADD MESSAGE
         // ========================================
 
-        function addMessage(
-            message,
-            sender
-        ) {
+        function addMessage(message, sender) {
 
             const messageDiv =
-                document.createElement(
-                    "div"
-                );
+                document.createElement("div");
 
 
             messageDiv.className =
                 "message " +
                 sender +
-                "-message";
+                "-message message-enter";
 
 
-            // --------------------------------
-            // User Message
-            // --------------------------------
+            // ------------------------------------
+            // User message
+            // ------------------------------------
 
             if (sender === "user") {
 
@@ -573,9 +542,9 @@
             }
 
 
-            // --------------------------------
-            // Bot Message
-            // --------------------------------
+            // ------------------------------------
+            // Bot message
+            // ------------------------------------
 
             else {
 
@@ -589,10 +558,7 @@
                     <div class="bubble">
 
                         ${escapeHtml(message)
-                            .replace(
-                                /\n/g,
-                                "<br>"
-                            )}
+                            .replace(/\n/g, "<br>")}
 
                         <span class="message-time">
                             Just now
@@ -605,53 +571,33 @@
             }
 
 
-            // --------------------------------
-            // Add Animation Class
-            // --------------------------------
-
-            messageDiv.classList.add(
-                "message-enter"
-            );
+            chatBox.appendChild(messageDiv);
 
 
-            chatBox.appendChild(
-                messageDiv
-            );
+            // ------------------------------------
+            // Scroll to latest message
+            // ------------------------------------
 
+            requestAnimationFrame(function() {
 
-            // --------------------------------
-            // Smooth Scroll
-            // --------------------------------
+                chatBox.scrollTo({
 
-            requestAnimationFrame(
-                function() {
+                    top: chatBox.scrollHeight,
 
-                    chatBox.scrollTo({
+                    behavior: "smooth"
 
-                        top:
-                            chatBox.scrollHeight,
+                });
 
-                        behavior:
-                            "smooth"
-
-                    });
-
-                }
-            );
+            });
 
         }
 
 
         // ========================================
-        // CLEAR CHAT + BACKEND CONTEXT
+        // CLEAR CHAT
         // ========================================
 
         async function clearChat() {
-
-            if (isSending) {
-                return;
-            }
-
 
             const confirmed =
                 confirm(
@@ -664,106 +610,112 @@
             }
 
 
-            try {
+            // ------------------------------------
+            // Immediately clear UI
+            // ------------------------------------
 
-                // --------------------------------
-                // Clear Backend Context
-                // --------------------------------
+            chatBox.innerHTML = `
+
+                <div class="welcome-message">
+
+                    <div class="welcome-icon"
+                         aria-hidden="true">
+                        🤖
+                    </div>
+
+                    <h2>Welcome Back! 👋</h2>
+
+                    <p>
+                        I'm your AI Support Assistant.
+                        How can I help you today?
+                    </p>
+
+                    <div class="quick-options">
+
+                        <button
+                            type="button"
+                            onclick="quickMessage('Where is my order?')">
+                            📦 Order Status
+                        </button>
+
+                        <button
+                            type="button"
+                            onclick="quickMessage('I want a refund')">
+                            💰 Refund
+                        </button>
+
+                        <button
+                            type="button"
+                            onclick="quickMessage('My payment failed')">
+                            💳 Payment
+                        </button>
+
+                        <button
+                            type="button"
+                            onclick="quickMessage('I forgot my password')">
+                            🔐 Password
+                        </button>
+
+                    </div>
+
+                </div>
+
+            `;
+
+
+            // ------------------------------------
+            // Reset frontend state
+            // ------------------------------------
+
+            input.value = "";
+
+            sendButton.classList.remove("ready");
+
+            typing.style.display = "none";
+
+            input.disabled = false;
+
+            sendButton.disabled = false;
+
+            isSending = false;
+
+            setLoadingState(false);
+
+            input.focus();
+
+
+            // ------------------------------------
+            // Clear backend context
+            // ------------------------------------
+
+            try {
 
                 const response =
                     await fetch(
                         "/clear-context",
                         {
-                            method: "POST"
+                            method: "POST",
+                            headers: {
+                                "Accept": "application/json"
+                            }
                         }
                     );
 
 
                 if (!response.ok) {
 
-                    throw new Error(
-                        "Unable to clear context"
+                    console.error(
+                        "Backend context clear failed:",
+                        response.status
                     );
 
                 }
 
-
-                // --------------------------------
-                // Clear Chat UI
-                // --------------------------------
-
-                chatBox.innerHTML = `
-
-                    <div class="welcome-message">
-
-                        <div class="welcome-icon"
-                             aria-hidden="true">
-                            🤖
-                        </div>
-
-                        <h2>Welcome Back! 👋</h2>
-
-                        <p>
-                            I'm your AI Support Assistant.
-                            How can I help you today?
-                        </p>
-
-                        <div class="quick-options">
-
-                            <button
-                                type="button"
-                                onclick="quickMessage('Where is my order?')">
-                                📦 Order Status
-                            </button>
-
-                            <button
-                                type="button"
-                                onclick="quickMessage('I want a refund')">
-                                💰 Refund
-                            </button>
-
-                            <button
-                                type="button"
-                                onclick="quickMessage('My payment failed')">
-                                💳 Payment
-                            </button>
-
-                            <button
-                                type="button"
-                                onclick="quickMessage('I forgot my password')">
-                                🔐 Password
-                            </button>
-
-                        </div>
-
-                    </div>
-
-                `;
-
-
-                // --------------------------------
-                // Reset UI
-                // --------------------------------
-
-                input.value = "";
-
-                sendButton.classList.remove(
-                    "ready"
-                );
-
-                input.focus();
-
-
             } catch (error) {
 
                 console.error(
-                    "Clear chat error:",
+                    "Clear context error:",
                     error
-                );
-
-
-                alert(
-                    "Unable to clear conversation. Please try again."
                 );
 
             }
@@ -778,9 +730,7 @@
         function escapeHtml(text) {
 
             const div =
-                document.createElement(
-                    "div"
-                );
+                document.createElement("div");
 
             div.textContent =
                 String(text);
@@ -791,17 +741,20 @@
 
 
         // ========================================
-        // INITIAL FOCUS
+        // INITIAL STATE
         // ========================================
 
-        window.addEventListener(
-            "load",
-            function() {
+        typing.style.display = "none";
 
-                input.focus();
+        sendButton.disabled = false;
 
-            }
-        );
+        input.disabled = false;
+
+        window.addEventListener("load", function() {
+
+            input.focus();
+
+        });
 
     </script>
 
