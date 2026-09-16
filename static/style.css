@@ -15,19 +15,31 @@ body {
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
-        Roboto, Arial, sans-serif;
+    font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        Roboto,
+        Arial,
+        sans-serif;
 
     background:
         radial-gradient(
-            circle at top left,
-            rgba(99, 102, 241, 0.12),
-            transparent 35%
+            circle at 10% 10%,
+            rgba(59, 130, 246, 0.35),
+            transparent 30%
+        ),
+        radial-gradient(
+            circle at 90% 90%,
+            rgba(124, 58, 237, 0.32),
+            transparent 32%
         ),
         linear-gradient(
             135deg,
-            #eef2ff,
-            #f8fafc
+            #0f172a 0%,
+            #172554 42%,
+            #312e81 72%,
+            #4c1d95 100%
         );
 
     min-height: 100vh;
@@ -38,7 +50,7 @@ body {
 
     padding: 20px;
 
-    color: #1e293b;
+    color: #e8edff;
 
     -webkit-font-smoothing: antialiased;
 }
@@ -55,20 +67,20 @@ body {
     height: 90vh;
     max-height: 850px;
 
-    background: #ffffff;
+    background: #0b122b;
 
-    border-radius: 22px;
-
-    box-shadow:
-        0 25px 60px rgba(15, 23, 42, 0.14),
-        0 8px 20px rgba(15, 23, 42, 0.07);
+    border-radius: 24px;
 
     overflow: hidden;
 
     display: flex;
     flex-direction: column;
 
-    border: 1px solid rgba(226, 232, 240, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+
+    box-shadow:
+        0 30px 80px rgba(2, 6, 23, 0.40),
+        0 10px 30px rgba(30, 64, 175, 0.18);
 }
 
 
@@ -80,9 +92,10 @@ body {
     background:
         linear-gradient(
             135deg,
-            #4338ca,
-            #4f46e5,
-            #6366f1
+            #1d4ed8 0%,
+            #2563eb 38%,
+            #4f46e5 70%,
+            #7c3aed 100%
         );
 
     color: white;
@@ -96,6 +109,24 @@ body {
     gap: 20px;
 
     position: relative;
+
+    overflow: hidden;
+}
+
+.chat-header::before {
+    content: "";
+
+    position: absolute;
+
+    width: 280px;
+    height: 280px;
+
+    right: -100px;
+    top: -160px;
+
+    border-radius: 50%;
+
+    background: rgba(255, 255, 255, 0.08);
 }
 
 .chat-header::after {
@@ -109,40 +140,56 @@ body {
 
     height: 1px;
 
-    background: rgba(255, 255, 255, 0.18);
+    background: rgba(255, 255, 255, 0.22);
 }
+
+
+/* ================================
+   BOT INFO
+================================ */
 
 .bot-info {
     display: flex;
+
     align-items: center;
 
     gap: 14px;
 
     min-width: 0;
+
+    position: relative;
+
+    z-index: 1;
 }
 
 .bot-avatar {
-    width: 52px;
-    height: 52px;
+    width: 54px;
+    height: 54px;
 
     flex-shrink: 0;
 
-    background: rgba(255, 255, 255, 0.16);
+    background:
+        linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.28),
+            rgba(125, 211, 252, 0.18)
+        );
 
-    border: 1px solid rgba(255, 255, 255, 0.28);
+    border: 1px solid rgba(255, 255, 255, 0.38);
 
-    border-radius: 16px;
+    border-radius: 17px;
 
     display: flex;
     align-items: center;
     justify-content: center;
 
-    font-size: 28px;
+    font-size: 29px;
 
-    backdrop-filter: blur(12px);
+    backdrop-filter: blur(14px);
 
     box-shadow:
-        0 8px 20px rgba(15, 23, 42, 0.12);
+        0 8px 24px rgba(2, 6, 23, 0.18),
+        0 0 22px rgba(96, 165, 250, 0.16);
 
     transition:
         transform 0.25s ease,
@@ -150,9 +197,13 @@ body {
 }
 
 .bot-avatar:hover {
-    transform: rotate(-3deg) scale(1.04);
+    transform:
+        translateY(-2px)
+        rotate(-3deg)
+        scale(1.04);
 
-    background: rgba(255, 255, 255, 0.22);
+    background:
+        rgba(255, 255, 255, 0.25);
 }
 
 .bot-details {
@@ -161,17 +212,19 @@ body {
 
 .bot-info h1 {
     font-size: 20px;
-    font-weight: 700;
+
+    font-weight: 750;
 
     margin-bottom: 5px;
 
-    letter-spacing: -0.2px;
+    letter-spacing: -0.25px;
 }
 
 .online-status {
     font-size: 13px;
 
     display: flex;
+
     align-items: center;
 
     gap: 7px;
@@ -185,17 +238,19 @@ body {
 
     flex-shrink: 0;
 
-    background: #22c55e;
+    background: #4ade80;
 
     border-radius: 50%;
 
     box-shadow:
-        0 0 0 4px rgba(34, 197, 94, 0.15);
+        0 0 0 4px rgba(74, 222, 128, 0.15),
+        0 0 12px rgba(74, 222, 128, 0.35);
 
     animation: pulse 2s infinite;
 }
 
 @keyframes pulse {
+
     0% {
         opacity: 1;
         transform: scale(1);
@@ -225,6 +280,10 @@ body {
     gap: 10px;
 
     flex-shrink: 0;
+
+    position: relative;
+
+    z-index: 2;
 }
 
 .history-btn,
@@ -238,10 +297,13 @@ body {
     border-radius: 11px;
 
     font-size: 13px;
-    font-weight: 600;
+
+    font-weight: 650;
 
     display: inline-flex;
+
     align-items: center;
+
     justify-content: center;
 
     gap: 5px;
@@ -254,52 +316,40 @@ body {
         box-shadow 0.2s ease;
 }
 
-
-/* ================================
-   HISTORY BUTTON
-================================ */
-
 .history-btn {
-    background: rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.13);
 
-    border: 1px solid rgba(255, 255, 255, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+
+    backdrop-filter: blur(10px);
 }
 
 .history-btn:hover {
-    background: rgba(255, 255, 255, 0.23);
+    background: rgba(255, 255, 255, 0.22);
 
     transform: translateY(-2px);
 
     box-shadow:
-        0 7px 18px rgba(15, 23, 42, 0.12);
+        0 8px 20px rgba(2, 6, 23, 0.16);
 }
-
-.history-btn:active {
-    transform: translateY(0);
-}
-
-
-/* ================================
-   ADMIN BUTTON
-================================ */
 
 .admin-btn {
-    background: rgba(15, 23, 42, 0.22);
+    background:
+        rgba(2, 6, 23, 0.23);
 
     border: 1px solid rgba(255, 255, 255, 0.30);
+
+    backdrop-filter: blur(10px);
 }
 
 .admin-btn:hover {
-    background: rgba(15, 23, 42, 0.34);
+    background:
+        rgba(2, 6, 23, 0.34);
 
     transform: translateY(-2px);
 
     box-shadow:
-        0 7px 18px rgba(15, 23, 42, 0.18);
-}
-
-.admin-btn:active {
-    transform: translateY(0);
+        0 8px 20px rgba(2, 6, 23, 0.20);
 }
 
 
@@ -319,10 +369,15 @@ body {
     background:
         radial-gradient(
             circle at 15% 10%,
-            rgba(99, 102, 241, 0.035),
+            rgba(99, 102, 241, 0.07),
+            transparent 28%
+        ),
+        radial-gradient(
+            circle at 90% 80%,
+            rgba(59, 130, 246, 0.055),
             transparent 30%
         ),
-        #f8fafc;
+        #0b1533;
 
     scroll-behavior: smooth;
 }
@@ -332,13 +387,21 @@ body {
 }
 
 .chat-box::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
+    background:
+        linear-gradient(
+            #93c5fd,
+            #a78bfa
+        );
 
     border-radius: 10px;
 }
 
 .chat-box::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
+    background:
+        linear-gradient(
+            #60a5fa,
+            #8b5cf6
+        );
 }
 
 .chat-box::-webkit-scrollbar-track {
@@ -354,19 +417,23 @@ body {
     min-height: 100%;
 
     display: flex;
+
     flex-direction: column;
 
     align-items: center;
+
     justify-content: center;
 
     text-align: center;
 
     padding: 30px;
 
-    animation: welcomeAppear 0.45s ease;
+    animation:
+        welcomeAppear 0.45s ease;
 }
 
 @keyframes welcomeAppear {
+
     from {
         opacity: 0;
         transform: translateY(12px);
@@ -379,61 +446,67 @@ body {
 }
 
 .welcome-icon {
-    width: 82px;
-    height: 82px;
+    width: 88px;
+    height: 88px;
 
-    border-radius: 25px;
+    border-radius: 27px;
 
     background:
         linear-gradient(
             135deg,
-            #eef2ff,
-            #e0e7ff
+            #dbeafe,
+            #e0e7ff 55%,
+            #ede9fe
         );
 
+    border: 1px solid #c7d2fe;
+
     display: flex;
+
     align-items: center;
     justify-content: center;
 
-    font-size: 41px;
+    font-size: 43px;
 
-    margin-bottom: 18px;
+    margin-bottom: 19px;
 
     box-shadow:
-        0 12px 30px rgba(79, 70, 229, 0.13);
+        0 14px 35px rgba(79, 70, 229, 0.18);
 
-    animation: floatingBot 3s ease-in-out infinite;
+    animation:
+        floatingBot 3s ease-in-out infinite;
 }
 
 @keyframes floatingBot {
+
     0%,
     100% {
         transform: translateY(0);
     }
 
     50% {
-        transform: translateY(-5px);
+        transform: translateY(-6px);
     }
 }
 
 .welcome-message h2 {
-    font-size: 27px;
+    font-size: 28px;
 
     margin-bottom: 10px;
 
-    color: #0f172a;
+    color: #f4f7ff;
 
-    letter-spacing: -0.4px;
+    letter-spacing: -0.5px;
 }
 
 .welcome-message p {
-    max-width: 520px;
+    max-width: 540px;
 
-    color: #64748b;
+    color: #9aa9cf;
 
     line-height: 1.65;
 
-    margin-bottom: 27px;
+    margin-bottom: 28px;
 
     font-size: 15px;
 }
@@ -453,20 +526,20 @@ body {
 
     width: 100%;
 
-    max-width: 540px;
+    max-width: 560px;
 }
 
 .quick-options button {
-    border: 1px solid #e2e8f0;
+    border: 1px solid #304775;
 
     background:
         linear-gradient(
-            180deg,
-            #ffffff,
-            #f8fafc
+            135deg,
+            #122044,
+            #172650
         );
 
-    color: #334155;
+    color: #dce5ff;
 
     padding: 14px 16px;
 
@@ -475,7 +548,8 @@ body {
     cursor: pointer;
 
     font-size: 14px;
-    font-weight: 600;
+
+    font-weight: 650;
 
     transition:
         transform 0.2s ease,
@@ -485,7 +559,7 @@ body {
         background 0.2s ease;
 
     box-shadow:
-        0 3px 8px rgba(15, 23, 42, 0.045);
+        0 4px 10px rgba(30, 41, 59, 0.05);
 }
 
 .quick-options button:hover {
@@ -493,19 +567,21 @@ body {
 
     color: #4338ca;
 
-    background: #ffffff;
+    background:
+        linear-gradient(
+            135deg,
+            #162752,
+            #1d2858
+        );
 
     transform: translateY(-3px);
 
     box-shadow:
-        0 10px 22px rgba(79, 70, 229, 0.11);
+        0 11px 24px rgba(79, 70, 229, 0.12);
 }
 
 .quick-options button:active {
     transform: translateY(-1px);
-
-    box-shadow:
-        0 5px 12px rgba(79, 70, 229, 0.08);
 }
 
 .quick-options button:focus-visible {
@@ -541,8 +617,10 @@ body {
 }
 
 @keyframes messageAppear {
+
     from {
         opacity: 0;
+
         transform:
             translateY(10px)
             scale(0.98);
@@ -550,6 +628,7 @@ body {
 
     to {
         opacity: 1;
+
         transform:
             translateY(0)
             scale(1);
@@ -564,32 +643,53 @@ body {
     justify-content: flex-start;
 }
 
+
+/* ================================
+   AVATARS
+================================ */
+
 .avatar {
-    width: 36px;
-    height: 36px;
+    width: 37px;
+    height: 37px;
 
     flex-shrink: 0;
 
     border-radius: 12px;
 
     display: flex;
+
     align-items: center;
     justify-content: center;
-
-    background: #e2e8f0;
 
     font-size: 18px;
 
     box-shadow:
-        0 2px 6px rgba(15, 23, 42, 0.05);
+        0 4px 10px rgba(15, 23, 42, 0.07);
 }
 
 .user-message .avatar {
-    background: #e0e7ff;
+    background:
+        linear-gradient(
+            135deg,
+            #ede9fe,
+            #ddd6fe
+        );
+
+    border: 1px solid #c4b5fd;
 }
 
 .bot-message .avatar {
-    background: #eef2ff;
+    background:
+        linear-gradient(
+            135deg,
+            #dbeafe,
+            #cffafe
+        );
+
+    border: 1px solid #bae6fd;
+
+    box-shadow:
+        0 4px 12px rgba(14, 165, 233, 0.12);
 }
 
 
@@ -612,42 +712,61 @@ body {
 
     overflow-wrap: anywhere;
 
-    box-shadow:
-        0 3px 9px rgba(15, 23, 42, 0.055);
-
     position: relative;
+
+    box-shadow:
+        0 4px 12px rgba(15, 23, 42, 0.06);
 }
+
+
+/* USER MESSAGE */
 
 .user-message .bubble {
     background:
         linear-gradient(
             135deg,
-            #4338ca,
             #4f46e5,
-            #6366f1
+            #6366f1 50%,
+            #7c3aed
         );
 
     color: white;
 
+    border:
+        1px solid rgba(255, 255, 255, 0.12);
+
     border-bottom-right-radius: 5px;
 
     box-shadow:
-        0 5px 14px rgba(79, 70, 229, 0.18);
+        0 7px 18px rgba(79, 70, 229, 0.22);
 }
 
+
+/* BOT MESSAGE */
+
 .bot-message .bubble {
-    background: #ffffff;
+    background:
+        linear-gradient(
+            135deg,
+            #122348,
+            #172b58 65%,
+            #20285f
+        );
 
-    color: #334155;
+    color: #e2eaff;
 
-    border: 1px solid #e2e8f0;
+    border:
+        1px solid #334b7d;
 
     border-bottom-left-radius: 5px;
+
+    box-shadow:
+        0 5px 15px rgba(30, 64, 175, 0.07);
 }
 
 .bot-message .bubble:hover {
     box-shadow:
-        0 5px 14px rgba(15, 23, 42, 0.07);
+        0 8px 20px rgba(30, 64, 175, 0.10);
 }
 
 .message-time {
@@ -678,16 +797,23 @@ body {
 
     padding: 10px 28px;
 
-    background: #f8fafc;
+    background:
+        linear-gradient(
+            90deg,
+            #111d3b,
+            #16264a
+        );
 
-    color: #64748b;
+    color: #9aa9cf;
 
     font-size: 13px;
 
-    animation: typingAppear 0.2s ease;
+    animation:
+        typingAppear 0.2s ease;
 }
 
 @keyframes typingAppear {
+
     from {
         opacity: 0;
         transform: translateY(4px);
@@ -711,7 +837,12 @@ body {
     width: 6px;
     height: 6px;
 
-    background: #94a3b8;
+    background:
+        linear-gradient(
+            135deg,
+            #3b82f6,
+            #8b5cf6
+        );
 
     border-radius: 50%;
 
@@ -728,6 +859,7 @@ body {
 }
 
 @keyframes typingBounce {
+
     0%,
     60%,
     100% {
@@ -753,9 +885,14 @@ body {
 
     padding: 16px 20px;
 
-    background: white;
+    background:
+        linear-gradient(
+            180deg,
+            #0c1630,
+            #101e3c
+        );
 
-    border-top: 1px solid #e2e8f0;
+    border-top: 1px solid #253c69;
 
     position: relative;
 }
@@ -765,7 +902,7 @@ body {
 
     min-width: 0;
 
-    border: 1px solid #cbd5e1;
+    border: 1px solid #334a78;
 
     border-radius: 13px;
 
@@ -775,9 +912,9 @@ body {
 
     outline: none;
 
-    color: #1e293b;
+    color: #e8edff;
 
-    background: #ffffff;
+    background: #111d3b;
 
     transition:
         border-color 0.2s ease,
@@ -786,20 +923,20 @@ body {
 }
 
 .input-area input::placeholder {
-    color: #94a3b8;
+    color: #8292bb;
 }
 
 .input-area input:focus {
     border-color: #6366f1;
 
-    background: #ffffff;
+    background: #142344;
 
     box-shadow:
-        0 0 0 3px rgba(99, 102, 241, 0.10);
+        0 0 0 4px rgba(99, 102, 241, 0.16);
 }
 
 .input-area input:disabled {
-    background: #f8fafc;
+    background: #18233f;
 
     cursor: not-allowed;
 
@@ -817,8 +954,9 @@ body {
     background:
         linear-gradient(
             135deg,
+            #2563eb,
             #4f46e5,
-            #6366f1
+            #7c3aed
         );
 
     color: white;
@@ -828,6 +966,7 @@ body {
     border-radius: 13px;
 
     font-size: 14px;
+
     font-weight: 700;
 
     cursor: pointer;
@@ -840,6 +979,7 @@ body {
     min-width: 90px;
 
     display: inline-flex;
+
     align-items: center;
     justify-content: center;
 
@@ -850,7 +990,7 @@ body {
     transform: translateY(-2px);
 
     box-shadow:
-        0 8px 20px rgba(79, 70, 229, 0.25);
+        0 9px 22px rgba(79, 70, 229, 0.28);
 }
 
 #send-button:active:not(:disabled) {
@@ -862,7 +1002,7 @@ body {
 
 #send-button.ready {
     box-shadow:
-        0 5px 15px rgba(79, 70, 229, 0.18);
+        0 6px 16px rgba(79, 70, 229, 0.20);
 }
 
 #send-button.loading {
@@ -893,17 +1033,23 @@ body {
     display: flex;
 
     align-items: center;
+
     justify-content: space-between;
 
     gap: 15px;
 
     padding: 10px 20px;
 
-    background: white;
+    background:
+        linear-gradient(
+            180deg,
+            #0c1630,
+            #101e3c
+        );
 
-    border-top: 1px solid #f1f5f9;
+    border-top: 1px solid #25334f;
 
-    color: #94a3b8;
+    color: #8292bb;
 
     font-size: 11px;
 }
@@ -913,7 +1059,7 @@ body {
 
     background: transparent;
 
-    color: #64748b;
+    color: #9aa9cf;
 
     cursor: pointer;
 
@@ -1012,7 +1158,7 @@ a:focus-visible {
     }
 
     .chat-header {
-        padding: 14px 14px;
+        padding: 14px;
 
         gap: 10px;
     }
@@ -1060,10 +1206,10 @@ a:focus-visible {
     }
 
     .welcome-icon {
-        width: 65px;
-        height: 65px;
+        width: 67px;
+        height: 67px;
 
-        font-size: 32px;
+        font-size: 33px;
 
         border-radius: 20px;
     }
