@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 
@@ -11,6 +12,69 @@
 
     <link rel="stylesheet"
           href="{{ url_for('static', filename='admin.css') }}">
+
+    <!-- Chart.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+
+    <style>
+
+        /* =========================
+           DASHBOARD CHARTS
+        ========================== */
+
+        .charts-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 30px;
+        }
+
+        .chart-card {
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 8px 25px rgba(15, 23, 42, 0.08);
+            border: 1px solid #e5e7eb;
+        }
+
+        .chart-card h2 {
+            margin: 0 0 6px;
+            font-size: 20px;
+            color: #1e293b;
+        }
+
+        .chart-card p {
+            margin: 0 0 20px;
+            color: #64748b;
+            font-size: 14px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+
+        .dashboard-summary {
+            margin-top: 30px;
+            margin-bottom: 20px;
+            font-size: 22px;
+            color: #1e293b;
+        }
+
+        @media (max-width: 800px) {
+
+            .charts-section {
+                grid-template-columns: 1fr;
+            }
+
+            .chart-container {
+                height: 280px;
+            }
+
+        }
+
+    </style>
+
 </head>
 
 <body>
@@ -124,6 +188,63 @@
                 </div>
 
             </div>
+
+        </section>
+
+
+        <!-- =========================
+             DASHBOARD CHARTS
+        ========================== -->
+
+        <h2 class="dashboard-summary">
+            📊 Dashboard Analytics
+        </h2>
+
+
+        <section class="charts-section">
+
+
+            <!-- OVERVIEW CHART -->
+
+            <div class="chart-card">
+
+                <h2>
+                    📈 Chatbot Overview
+                </h2>
+
+                <p>
+                    Current chatbot activity and knowledge base
+                </p>
+
+                <div class="chart-container">
+
+                    <canvas id="overviewChart"></canvas>
+
+                </div>
+
+            </div>
+
+
+            <!-- SYSTEM DATA CHART -->
+
+            <div class="chart-card">
+
+                <h2>
+                    🍩 System Data
+                </h2>
+
+                <p>
+                    Distribution of chatbot data
+                </p>
+
+                <div class="chart-container">
+
+                    <canvas id="systemChart"></canvas>
+
+                </div>
+
+            </div>
+
 
         </section>
 
@@ -335,6 +456,166 @@
 
 </div>
 
+
+<!-- =========================
+     CHART JAVASCRIPT
+========================== -->
+
+<script>
+
+    // Values coming from Flask
+    const totalChats =
+        Number("{{ total_chats }}") || 0;
+
+    const todayChats =
+        Number("{{ today_chats }}") || 0;
+
+    const totalResponses =
+        Number("{{ total_responses }}") || 0;
+
+    const totalFaqs =
+        Number("{{ total_faqs }}") || 0;
+
+
+    // =========================
+    // OVERVIEW BAR CHART
+    // =========================
+
+    const overviewCanvas =
+        document.getElementById("overviewChart");
+
+    new Chart(
+        overviewCanvas,
+        {
+            type: "bar",
+
+            data: {
+
+                labels: [
+                    "Total Chats",
+                    "Today's Chats",
+                    "Bot Responses",
+                    "Total FAQs"
+                ],
+
+                datasets: [
+
+                    {
+                        label: "Count",
+
+                        data: [
+                            totalChats,
+                            todayChats,
+                            totalResponses,
+                            totalFaqs
+                        ],
+
+                        borderWidth: 1,
+
+                        borderRadius: 8
+                    }
+
+                ]
+
+            },
+
+            options: {
+
+                responsive: true,
+
+                maintainAspectRatio: false,
+
+                plugins: {
+
+                    legend: {
+                        display: false
+                    }
+
+                },
+
+                scales: {
+
+                    y: {
+
+                        beginAtZero: true,
+
+                        ticks: {
+                            precision: 0
+                        }
+
+                    }
+
+                }
+
+            }
+
+        }
+    );
+
+
+    // =========================
+    // SYSTEM DOUGHNUT CHART
+    // =========================
+
+    const systemCanvas =
+        document.getElementById("systemChart");
+
+
+    new Chart(
+        systemCanvas,
+        {
+            type: "doughnut",
+
+            data: {
+
+                labels: [
+                    "Conversations",
+                    "Bot Responses",
+                    "FAQs"
+                ],
+
+                datasets: [
+
+                    {
+                        data: [
+                            totalChats,
+                            totalResponses,
+                            totalFaqs
+                        ],
+
+                        borderWidth: 2
+                    }
+
+                ]
+
+            },
+
+            options: {
+
+                responsive: true,
+
+                maintainAspectRatio: false,
+
+                cutout: "65%",
+
+                plugins: {
+
+                    legend: {
+
+                        position: "bottom"
+
+                    }
+
+                }
+
+            }
+
+        }
+    );
+
+</script>
+
 </body>
 
 </html>
+```

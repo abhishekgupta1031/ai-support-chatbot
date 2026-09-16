@@ -5,7 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>AI Support Chatbot</title>
+    <meta name="description"
+          content="AI Support Assistant - Intelligent customer support chatbot">
+
+    <title>AI Support Assistant</title>
 
     <link rel="stylesheet"
           href="{{ url_for('static', filename='style.css') }}">
@@ -15,34 +18,43 @@
 
     <div class="chat-container">
 
+        <!-- ============================= -->
         <!-- HEADER -->
+        <!-- ============================= -->
+
         <header class="chat-header">
 
             <div class="bot-info">
 
-                <div class="bot-avatar">
+                <div class="bot-avatar" aria-hidden="true">
                     🤖
                 </div>
 
-                <div>
+                <div class="bot-details">
+
                     <h1>AI Support Assistant</h1>
 
                     <div class="online-status">
                         <span class="status-dot"></span>
-                        Online • Ready to help
+                        <span>Online • Ready to help</span>
                     </div>
+
                 </div>
 
             </div>
 
             <div class="header-buttons">
 
-                <a href="/history" class="history-btn">
-                    📊 History
+                <a href="/history"
+                   class="history-btn"
+                   aria-label="View chat history">
+                    📊 <span>History</span>
                 </a>
 
-                <a href="/admin/login" class="admin-btn">
-                    🔐 Admin Login
+                <a href="/admin/login"
+                   class="admin-btn"
+                   aria-label="Open admin login">
+                    🔐 <span>Admin Login</span>
                 </a>
 
             </div>
@@ -50,12 +62,18 @@
         </header>
 
 
+        <!-- ============================= -->
         <!-- CHAT AREA -->
-        <main id="chat-box" class="chat-box">
+        <!-- ============================= -->
+
+        <main id="chat-box"
+              class="chat-box"
+              aria-live="polite"
+              aria-label="Chat conversation">
 
             <div class="welcome-message">
 
-                <div class="welcome-icon">
+                <div class="welcome-icon" aria-hidden="true">
                     🤖
                 </div>
 
@@ -68,19 +86,27 @@
 
                 <div class="quick-options">
 
-                    <button onclick="quickMessage('Where is my order?')">
+                    <button
+                        type="button"
+                        onclick="quickMessage('Where is my order?')">
                         📦 Order Status
                     </button>
 
-                    <button onclick="quickMessage('I want a refund')">
+                    <button
+                        type="button"
+                        onclick="quickMessage('I want a refund')">
                         💰 Refund
                     </button>
 
-                    <button onclick="quickMessage('My payment failed')">
+                    <button
+                        type="button"
+                        onclick="quickMessage('My payment failed')">
                         💳 Payment
                     </button>
 
-                    <button onclick="quickMessage('I forgot my password')">
+                    <button
+                        type="button"
+                        onclick="quickMessage('I forgot my password')">
                         🔐 Password
                     </button>
 
@@ -91,23 +117,35 @@
         </main>
 
 
+        <!-- ============================= -->
         <!-- TYPING INDICATOR -->
-        <div id="typing" class="typing">
+        <!-- ============================= -->
 
-            <span>🤖</span>
+        <div id="typing"
+             class="typing"
+             role="status"
+             aria-label="AI is typing">
+
+            <span aria-hidden="true">🤖</span>
 
             <span>AI is typing</span>
 
-            <div class="typing-dots">
+            <div class="typing-dots"
+                 aria-hidden="true">
+
                 <span></span>
                 <span></span>
                 <span></span>
+
             </div>
 
         </div>
 
 
-        <!-- INPUT -->
+        <!-- ============================= -->
+        <!-- INPUT AREA -->
+        <!-- ============================= -->
+
         <div class="input-area">
 
             <input
@@ -115,27 +153,37 @@
                 id="user-input"
                 placeholder="Type your message..."
                 autocomplete="off"
+                maxlength="500"
+                aria-label="Type your message"
             >
 
             <button
+                type="button"
                 id="send-button"
                 onclick="sendMessage()"
-            >
-                Send
-                <span>➤</span>
+                aria-label="Send message">
+
+                <span id="send-text">Send</span>
+                <span id="send-icon">➤</span>
+
             </button>
 
         </div>
 
 
+        <!-- ============================= -->
         <!-- FOOTER -->
+        <!-- ============================= -->
+
         <div class="chat-footer">
 
             <button
+                type="button"
                 onclick="clearChat()"
-                class="clear-btn"
-            >
+                class="clear-btn">
+
                 🗑️ Clear Chat
+
             </button>
 
             <span>
@@ -146,6 +194,10 @@
 
     </div>
 
+
+    <!-- ============================= -->
+    <!-- JAVASCRIPT -->
+    <!-- ============================= -->
 
     <script>
 
@@ -161,101 +213,183 @@
         const sendButton =
             document.getElementById("send-button");
 
+        const sendText =
+            document.getElementById("send-text");
 
-        // --------------------------------
-        // Enter Key
-        // --------------------------------
+        const sendIcon =
+            document.getElementById("send-icon");
+
+
+        // ========================================
+        // STATE
+        // ========================================
+
+        let isSending = false;
+
+
+        // ========================================
+        // ENTER KEY
+        // ========================================
 
         input.addEventListener(
-            "keypress",
+            "keydown",
             function(event) {
 
-                if (event.key === "Enter") {
+                if (
+                    event.key === "Enter" &&
+                    !event.shiftKey
+                ) {
+
+                    event.preventDefault();
+
                     sendMessage();
+
                 }
 
             }
         );
 
 
-        // --------------------------------
-        // Quick Message
-        // --------------------------------
+        // ========================================
+        // INPUT STATE
+        // ========================================
+
+        input.addEventListener(
+            "input",
+            function() {
+
+                if (input.value.trim()) {
+
+                    sendButton.classList.add(
+                        "ready"
+                    );
+
+                } else {
+
+                    sendButton.classList.remove(
+                        "ready"
+                    );
+
+                }
+
+            }
+        );
+
+
+        // ========================================
+        // QUICK MESSAGE
+        // ========================================
 
         function quickMessage(message) {
 
+            if (isSending) {
+                return;
+            }
+
             input.value = message;
+
+            sendButton.classList.add("ready");
 
             sendMessage();
 
         }
 
 
-        // --------------------------------
-        // Send Message
-        // --------------------------------
+        // ========================================
+        // SEND MESSAGE
+        // ========================================
 
         async function sendMessage() {
+
+            if (isSending) {
+                return;
+            }
 
             const message =
                 input.value.trim();
 
 
             if (!message) {
+
+                input.focus();
+
                 return;
+
             }
 
 
-            // Remove welcome screen
+            isSending = true;
+
+
+            // --------------------------------
+            // Remove Welcome Screen
+            // --------------------------------
+
             const welcome =
-                document.querySelector(".welcome-message");
+                document.querySelector(
+                    ".welcome-message"
+                );
 
             if (welcome) {
                 welcome.remove();
             }
 
 
-            // Add user message
+            // --------------------------------
+            // Add User Message
+            // --------------------------------
+
             addMessage(
                 message,
                 "user"
             );
 
 
+            // --------------------------------
+            // Reset Input
+            // --------------------------------
+
             input.value = "";
 
-            input.focus();
+            sendButton.classList.remove(
+                "ready"
+            );
 
 
-            // Show typing
-            typing.style.display = "flex";
+            // --------------------------------
+            // Loading State
+            // --------------------------------
 
-            sendButton.disabled = true;
+            setLoadingState(true);
 
 
             try {
 
                 const response =
-                    await fetch("/chat", {
+                    await fetch(
+                        "/chat",
+                        {
+                            method: "POST",
 
-                        method: "POST",
+                            headers: {
+                                "Content-Type":
+                                    "application/json"
+                            },
 
-                        headers: {
-                            "Content-Type":
-                                "application/json"
-                        },
-
-                        body: JSON.stringify({
-                            message: message
-                        })
-
-                    });
+                            body: JSON.stringify({
+                                message: message
+                            })
+                        }
+                    );
 
 
                 if (!response.ok) {
+
                     throw new Error(
-                        "Server error"
+                        "Server error: " +
+                        response.status
                     );
+
                 }
 
 
@@ -263,26 +397,57 @@
                     await response.json();
 
 
-                // Small delay for natural effect
+                // --------------------------------
+                // Natural Typing Delay
+                // --------------------------------
+
                 await new Promise(
                     resolve =>
-                        setTimeout(resolve, 600)
+                        setTimeout(
+                            resolve,
+                            600
+                        )
                 );
 
 
-                typing.style.display = "none";
+                // --------------------------------
+                // Hide Typing
+                // --------------------------------
+
+                typing.style.display =
+                    "none";
 
 
-                // Bot response
-                addMessage(
-                    data.response,
-                    "bot"
-                );
+                // --------------------------------
+                // Bot Response
+                // --------------------------------
+
+                if (
+                    data &&
+                    typeof data.response === "string"
+                ) {
+
+                    addMessage(
+                        data.response,
+                        "bot"
+                    );
+
+                } else {
+
+                    addMessage(
+                        "Sorry, I couldn't process that message. Please try again. 😔",
+                        "bot"
+                    );
+
+                }
 
 
             } catch (error) {
 
-                console.error(error);
+                console.error(
+                    "Chat error:",
+                    error
+                );
 
 
                 typing.style.display =
@@ -294,19 +459,74 @@
                     "bot"
                 );
 
+
+            } finally {
+
+                setLoadingState(false);
+
+                input.focus();
+
             }
-
-
-            sendButton.disabled = false;
-
-            input.focus();
 
         }
 
 
-        // --------------------------------
-        // Add Message
-        // --------------------------------
+        // ========================================
+        // LOADING STATE
+        // ========================================
+
+        function setLoadingState(loading) {
+
+            if (loading) {
+
+                typing.style.display =
+                    "flex";
+
+                sendButton.disabled =
+                    true;
+
+                input.disabled =
+                    true;
+
+                sendText.textContent =
+                    "Sending";
+
+                sendIcon.textContent =
+                    "⏳";
+
+                sendButton.classList.add(
+                    "loading"
+                );
+
+            } else {
+
+                typing.style.display =
+                    "none";
+
+                sendButton.disabled =
+                    false;
+
+                input.disabled =
+                    false;
+
+                sendText.textContent =
+                    "Send";
+
+                sendIcon.textContent =
+                    "➤";
+
+                sendButton.classList.remove(
+                    "loading"
+                );
+
+            }
+
+        }
+
+
+        // ========================================
+        // ADD MESSAGE
+        // ========================================
 
         function addMessage(
             message,
@@ -314,7 +534,9 @@
         ) {
 
             const messageDiv =
-                document.createElement("div");
+                document.createElement(
+                    "div"
+                );
 
 
             messageDiv.className =
@@ -322,6 +544,10 @@
                 sender +
                 "-message";
 
+
+            // --------------------------------
+            // User Message
+            // --------------------------------
 
             if (sender === "user") {
 
@@ -337,24 +563,36 @@
 
                     </div>
 
-                    <div class="avatar">
+                    <div class="avatar"
+                         aria-hidden="true">
                         👤
                     </div>
 
                 `;
 
-            } else {
+            }
+
+
+            // --------------------------------
+            // Bot Message
+            // --------------------------------
+
+            else {
 
                 messageDiv.innerHTML = `
 
-                    <div class="avatar">
+                    <div class="avatar"
+                         aria-hidden="true">
                         🤖
                     </div>
 
                     <div class="bubble">
 
                         ${escapeHtml(message)
-                            .replace(/\n/g, "<br>")}
+                            .replace(
+                                /\n/g,
+                                "<br>"
+                            )}
 
                         <span class="message-time">
                             Just now
@@ -367,28 +605,53 @@
             }
 
 
+            // --------------------------------
+            // Add Animation Class
+            // --------------------------------
+
+            messageDiv.classList.add(
+                "message-enter"
+            );
+
+
             chatBox.appendChild(
                 messageDiv
             );
 
 
-            // Scroll to bottom
-            chatBox.scrollTo({
+            // --------------------------------
+            // Smooth Scroll
+            // --------------------------------
 
-                top: chatBox.scrollHeight,
+            requestAnimationFrame(
+                function() {
 
-                behavior: "smooth"
+                    chatBox.scrollTo({
 
-            });
+                        top:
+                            chatBox.scrollHeight,
+
+                        behavior:
+                            "smooth"
+
+                    });
+
+                }
+            );
 
         }
 
 
-        // --------------------------------
-        // Clear Chat + Backend Context
-        // --------------------------------
+        // ========================================
+        // CLEAR CHAT + BACKEND CONTEXT
+        // ========================================
 
         async function clearChat() {
+
+            if (isSending) {
+                return;
+            }
+
 
             const confirmed =
                 confirm(
@@ -403,7 +666,10 @@
 
             try {
 
-                // Clear conversation context
+                // --------------------------------
+                // Clear Backend Context
+                // --------------------------------
+
                 const response =
                     await fetch(
                         "/clear-context",
@@ -414,18 +680,24 @@
 
 
                 if (!response.ok) {
+
                     throw new Error(
                         "Unable to clear context"
                     );
+
                 }
 
 
-                // Clear chat UI
+                // --------------------------------
+                // Clear Chat UI
+                // --------------------------------
+
                 chatBox.innerHTML = `
 
                     <div class="welcome-message">
 
-                        <div class="welcome-icon">
+                        <div class="welcome-icon"
+                             aria-hidden="true">
                             🤖
                         </div>
 
@@ -438,19 +710,27 @@
 
                         <div class="quick-options">
 
-                            <button onclick="quickMessage('Where is my order?')">
+                            <button
+                                type="button"
+                                onclick="quickMessage('Where is my order?')">
                                 📦 Order Status
                             </button>
 
-                            <button onclick="quickMessage('I want a refund')">
+                            <button
+                                type="button"
+                                onclick="quickMessage('I want a refund')">
                                 💰 Refund
                             </button>
 
-                            <button onclick="quickMessage('My payment failed')">
+                            <button
+                                type="button"
+                                onclick="quickMessage('My payment failed')">
                                 💳 Payment
                             </button>
 
-                            <button onclick="quickMessage('I forgot my password')">
+                            <button
+                                type="button"
+                                onclick="quickMessage('I forgot my password')">
                                 🔐 Password
                             </button>
 
@@ -461,14 +741,26 @@
                 `;
 
 
+                // --------------------------------
+                // Reset UI
+                // --------------------------------
+
                 input.value = "";
+
+                sendButton.classList.remove(
+                    "ready"
+                );
 
                 input.focus();
 
 
             } catch (error) {
 
-                console.error(error);
+                console.error(
+                    "Clear chat error:",
+                    error
+                );
+
 
                 alert(
                     "Unable to clear conversation. Please try again."
@@ -479,20 +771,37 @@
         }
 
 
-        // --------------------------------
-        // HTML Security
-        // --------------------------------
+        // ========================================
+        // HTML SECURITY
+        // ========================================
 
         function escapeHtml(text) {
 
             const div =
-                document.createElement("div");
+                document.createElement(
+                    "div"
+                );
 
-            div.textContent = text;
+            div.textContent =
+                String(text);
 
             return div.innerHTML;
 
         }
+
+
+        // ========================================
+        // INITIAL FOCUS
+        // ========================================
+
+        window.addEventListener(
+            "load",
+            function() {
+
+                input.focus();
+
+            }
+        );
 
     </script>
 

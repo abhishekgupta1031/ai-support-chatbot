@@ -1,3 +1,4 @@
+
 from flask import (
     Flask,
     render_template,
@@ -8,10 +9,13 @@ from flask import (
     url_for
 )
 
-from chatbot import get_response
+from chatbot import (
+    get_response,
+    find_best_intent
+)
 
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 import os
 from dotenv import load_dotenv
@@ -89,14 +93,33 @@ def init_db():
 
     cursor = conn.cursor()
 
+    # Create table if it does not exist
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS chat_logs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_message TEXT NOT NULL,
             bot_response TEXT NOT NULL,
-            timestamp TEXT NOT NULL
+            timestamp TEXT NOT NULL,
+            intent TEXT
         )
     """)
+
+    # Safe migration for existing databases
+    cursor.execute("""
+        PRAGMA table_info(chat_logs)
+    """)
+
+    columns = [
+        row[1]
+        for row in cursor.fetchall()
+    ]
+
+    if "intent" not in columns:
+
+        cursor.execute("""
+            ALTER TABLE chat_logs
+            ADD COLUMN intent TEXT
+        """)
 
     conn.commit()
 
@@ -109,7 +132,8 @@ def init_db():
 
 def save_chat(
     user_message,
-    bot_response
+    bot_response,
+    intent=None
 ):
 
     try:
@@ -127,13 +151,15 @@ def save_chat(
             (
                 user_message,
                 bot_response,
-                timestamp
+                timestamp,
+                intent
             )
-            VALUES (?, ?, ?)
+            VALUES (?, ?, ?, ?)
         """, (
             user_message,
             bot_response,
-            timestamp
+            timestamp,
+            intent
         ))
 
         conn.commit()
@@ -274,6 +300,7 @@ def chat():
             {}
         )
 
+        # Existing chatbot response
         response = get_response(
             user_message,
             context
@@ -283,10 +310,36 @@ def chat():
 
         session.modified = True
 
+
+        # =========================
+        # DETECT INTENT
+        # =========================
+
+        try:
+
+            detected_intent, intent_score = (
+                find_best_intent(
+                    user_message
+                )
+            )
+
+        except Exception as intent_error:
+
+            print(
+                "Intent Detection Error:",
+                intent_error
+            )
+
+            detected_intent = None
+
+
+        # Save chat + intent
         save_chat(
             user_message,
-            response
+            response,
+            detected_intent
         )
+
 
         return jsonify({
             "response": response
@@ -457,7 +510,10 @@ def admin():
 
     cursor = conn.cursor()
 
-    # Total conversations
+
+    # =========================
+    # TOTAL CHATS
+    # =========================
 
     cursor.execute("""
         SELECT COUNT(*)
@@ -467,7 +523,9 @@ def admin():
     total_chats = cursor.fetchone()[0]
 
 
-    # Today's conversations
+    # =========================
+    # TODAY'S CHATS
+    # =========================
 
     today = datetime.now().strftime(
         "%Y-%m-%d"
@@ -484,7 +542,9 @@ def admin():
     today_chats = cursor.fetchone()[0]
 
 
-    # Total bot responses
+    # =========================
+    # TOTAL BOT RESPONSES
+    # =========================
 
     cursor.execute("""
         SELECT COUNT(bot_response)
@@ -494,7 +554,9 @@ def admin():
     total_responses = cursor.fetchone()[0]
 
 
-    # Recent activity
+    # =========================
+    # RECENT ACTIVITY
+    # =========================
 
     cursor.execute("""
         SELECT
@@ -508,24 +570,124 @@ def admin():
 
     recent_chats = cursor.fetchall()
 
+
+    # =========================
+    # LAST 7 DAYS ANALYTICS
+    # =========================
+
+    daily_labels = []
+    daily_counts = []
+
+    for days_ago in range(
+        6,
+        -1,
+        -1
+    ):
+
+        date_value = (
+            datetime.now()
+            - timedelta(days=days_ago)
+        )
+
+        date_string = date_value.strftime(
+            "%Y-%m-%d"
+        )
+
+        display_date = date_value.strftime(
+            "%d %b"
+        )
+
+        cursor.execute("""
+            SELECT COUNT(*)
+            FROM chat_logs
+            WHERE timestamp LIKE ?
+        """, (
+            date_string + "%",
+        ))
+
+        count = cursor.fetchone()[0]
+
+        daily_labels.append(
+            display_date
+        )
+
+        daily_counts.append(
+            count
+        )
+
+
+    # =========================
+    # INTENT ANALYTICS
+    # =========================
+
+    cursor.execute("""
+        SELECT
+            intent,
+            COUNT(*) AS count
+        FROM chat_logs
+        WHERE intent IS NOT NULL
+        AND intent != ''
+        GROUP BY intent
+        ORDER BY count DESC
+    """)
+
+    intent_rows = cursor.fetchall()
+
+    intent_labels = []
+    intent_counts = []
+
+    for row in intent_rows:
+
+        intent_labels.append(
+            row["intent"].replace(
+                "_",
+                " "
+            ).title()
+        )
+
+        intent_counts.append(
+            row["count"]
+        )
+
+
     conn.close()
 
 
-    # Total FAQs
+    # =========================
+    # FAQ DATA
+    # =========================
 
     faqs = load_faqs()
 
     total_faqs = len(faqs)
 
 
+    # =========================
+    # RENDER DASHBOARD
+    # =========================
+
     return render_template(
         "admin.html",
+
         faqs=faqs,
+
         total_chats=total_chats,
+
         today_chats=today_chats,
+
         total_responses=total_responses,
+
         total_faqs=total_faqs,
-        recent_chats=recent_chats
+
+        recent_chats=recent_chats,
+
+        daily_labels=daily_labels,
+
+        daily_counts=daily_counts,
+
+        intent_labels=intent_labels,
+
+        intent_counts=intent_counts
     )
 
 
@@ -664,7 +826,9 @@ def delete_faq(index):
 # application starts, including Gunicorn.
 init_db()
 
+
 if __name__ == "__main__":
+
     app.run(
         debug=True
     )
