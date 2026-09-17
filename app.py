@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 import json
 import os
 import secrets
+import resend
 from dotenv import load_dotenv
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -21,15 +22,14 @@ ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
 ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL")
 
-SMTP_HOST = os.environ.get("SMTP_HOST", "smtp.gmail.com")
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
+RESEND_FROM_EMAIL = os.environ.get(
+    "RESEND_FROM_EMAIL",
+    "onboarding@resend.dev"
+)
 
-try:
-    SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
-except ValueError:
-    SMTP_PORT = 587
-
-SMTP_USERNAME = os.environ.get("SMTP_USERNAME")
-SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD")
+if RESEND_API_KEY:
+    resend.api_key = RESEND_API_KEY
 
 DB_NAME = "chatbot.db"
 FAQ_FILE = os.path.join("data", "faq.json")
@@ -361,7 +361,6 @@ def admin_login():
                 url_for("admin")
             )
 
-        # Backward-compatible environment login
         if (
             ADMIN_USERNAME
             and ADMIN_PASSWORD
@@ -600,8 +599,7 @@ def delete_faq(index):
 
         faqs.pop(index)
 
-        if not save_faqs(faqs):
-            print("FAQ delete/save failed.")
+        save_faqs(faqs)
 
     return redirect(
         url_for("admin")
@@ -633,7 +631,6 @@ def forgot_password():
                 error="Please enter your admin username."
             )
 
-        # Check admin account
         conn = get_db_connection()
 
         admin = conn.execute(
@@ -654,7 +651,6 @@ def forgot_password():
                 error="Admin account was not found."
             )
 
-        # Check email configuration
         if not ADMIN_EMAIL:
             conn.close()
 
@@ -662,24 +658,23 @@ def forgot_password():
                 "forgot_password.html",
                 message=None,
                 error=(
-                    "Password reset email is not configured yet. "
-                    "Please configure ADMIN_EMAIL in Render Environment Variables."
+                    "Password reset email is not configured. "
+                    "Please check ADMIN_EMAIL in Render."
                 )
             )
 
-        if not SMTP_USERNAME or not SMTP_PASSWORD:
+        if not RESEND_API_KEY:
             conn.close()
 
             return render_template(
                 "forgot_password.html",
                 message=None,
                 error=(
-                    "SMTP email settings are incomplete. "
-                    "Please check Render Environment Variables."
+                    "Resend email service is not configured. "
+                    "Please check RESEND_API_KEY in Render."
                 )
             )
 
-        # Generate secure token
         token = secrets.token_urlsafe(32)
 
         expires_at = (
@@ -689,7 +684,6 @@ def forgot_password():
             "%Y-%m-%d %H:%M:%S"
         )
 
-        # Invalidate previous tokens
         conn.execute(
             """
             UPDATE password_reset_tokens
@@ -700,7 +694,6 @@ def forgot_password():
             (username,)
         )
 
-        # Create new token
         conn.execute(
             """
             INSERT INTO password_reset_tokens
@@ -728,7 +721,6 @@ def forgot_password():
             _external=True
         )
 
-        # Send email
         email_sent = send_reset_email(
             username,
             reset_link
@@ -743,7 +735,6 @@ def forgot_password():
 
         else:
 
-            # If email failed, invalidate token
             try:
                 cleanup_conn = get_db_connection()
 
@@ -767,7 +758,7 @@ def forgot_password():
 
             error = (
                 "Unable to send the reset email. "
-                "Please check Gmail SMTP settings in Render."
+                "Please check the Resend configuration."
             )
 
     return render_template(
@@ -784,114 +775,93 @@ def send_reset_email(
     reset_link
 ):
 
-    # Lazy imports:
-    # SMTP/email modules are loaded only when needed.
-    import smtplib
-    from email.message import EmailMessage
-
-    if not all([
-        SMTP_HOST,
-        SMTP_USERNAME,
-        SMTP_PASSWORD,
-        ADMIN_EMAIL
-    ]):
+    if not RESEND_API_KEY:
         print(
-            "SMTP configuration is incomplete."
+            "RESEND_API_KEY is missing."
         )
-
         return False
 
     try:
 
-        email_message = EmailMessage()
+        response = resend.Emails.send({
+            "from": RESEND_FROM_EMAIL,
+            "to": [ADMIN_EMAIL],
+            "subject": "AI Support Chatbot - Password Reset",
+            "html": f"""
+                <div style="
+                    font-family: Arial, sans-serif;
+                    max-width: 600px;
+                    margin: auto;
+                    padding: 30px;
+                    border: 1px solid #e5e7eb;
+                    border-radius: 12px;
+                ">
 
-        email_message["Subject"] = (
-            "AI Support Chatbot - Password Reset"
-        )
+                    <h2>
+                        AI Support Chatbot
+                    </h2>
 
-        email_message["From"] = SMTP_USERNAME
+                    <p>
+                        Hello <strong>{username}</strong>,
+                    </p>
 
-        email_message["To"] = ADMIN_EMAIL
+                    <p>
+                        A password reset was requested
+                        for your admin account.
+                    </p>
 
-        email_message.set_content(
-            f"""
-Hello {username},
+                    <p>
+                        Click the button below to
+                        create a new password:
+                    </p>
 
-A password reset was requested for your
-AI Support Chatbot admin account.
+                    <p>
+                        <a href="{reset_link}"
+                           style="
+                               display: inline-block;
+                               padding: 12px 20px;
+                               background: #4f46e5;
+                               color: white;
+                               text-decoration: none;
+                               border-radius: 8px;
+                               font-weight: bold;
+                           ">
+                           Reset Password
+                        </a>
+                    </p>
 
-Use the link below to create a new password:
+                    <p>
+                        This link will expire in
+                        <strong>15 minutes</strong>.
+                    </p>
 
-{reset_link}
+                    <p>
+                        If you did not request this
+                        password reset, you can safely
+                        ignore this email.
+                    </p>
 
-This link will expire in 15 minutes.
+                    <hr>
 
-If you did not request this password reset,
-you can safely ignore this email.
+                    <p style="color: #6b7280;">
+                        AI Support Chatbot
+                    </p>
 
-AI Support Chatbot
-"""
-        )
-
-        # Gmail SMTP connection with timeout
-        with smtplib.SMTP(
-            SMTP_HOST,
-            SMTP_PORT,
-            timeout=10
-        ) as server:
-
-            server.ehlo()
-
-            server.starttls()
-
-            server.ehlo()
-
-            server.login(
-                SMTP_USERNAME,
-                SMTP_PASSWORD
-            )
-
-            server.send_message(
-                email_message
-            )
+                </div>
+            """
+        })
 
         print(
-            "Password reset email sent successfully."
+            "Resend email response:",
+            response
         )
 
         return True
 
-    except smtplib.SMTPAuthenticationError as e:
-
-        print(
-            "Gmail SMTP authentication failed:",
-            e
-        )
-
-        return False
-
-    except smtplib.SMTPException as e:
-
-        print(
-            "Gmail SMTP error:",
-            e
-        )
-
-        return False
-
-    except TimeoutError as e:
-
-        print(
-            "SMTP connection timeout:",
-            e
-        )
-
-        return False
-
     except Exception as e:
 
         print(
-            "Email sending error:",
+            "Resend email error:",
             e
         )
 
